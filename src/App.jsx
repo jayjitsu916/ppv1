@@ -1,8 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 /* ─── OD lookup table ────────────────────────────────────────── */
-const QUARTER_MM = 24.26;
-
 const OD_TABLE = [
   { od:0.500, nominal:'⅜"',   material:"Copper / PEX" },
   { od:0.625, nominal:'½"',   material:"Copper / PEX / CPVC" },
@@ -244,156 +242,17 @@ function lookupDanger(materialStr) {
    OD = outer diameter of the circle.
    Wall thickness is also measurable → helps confirm grade.
 ─────────────────────────────────────────────────────────────── */
-function buildTopDownPrompt() {
-  return `You are a precision measurement expert and master plumber.
-
-SHOOTING MODE: TOP-DOWN
-The camera is pointing straight down at a pipe lying horizontally on the ground.
-A US quarter coin (exact OD: 24.26mm / 0.9550") is resting flat on TOP of the pipe surface.
-
-MEASUREMENT TASK:
-1. Locate the quarter in the image. Measure its apparent diameter in pixels (longest axis).
-   NOTE: The quarter is elevated above ground level by sitting on the curved pipe surface.
-   This means it appears slightly LARGER in the photo than the pipe edges (which are at ground level).
-   Apply a small downward correction: true_quarter_px ≈ apparent_quarter_px × 0.97
-   (This accounts for ~3% parallax from the quarter being closer to the camera.)
-
-2. Locate the pipe. Measure the full width between the two outermost visible edges in pixels.
-   This width IS the outside diameter when viewed from directly above.
-
-3. Calculate:
-   mm_per_px = 24.26 / true_quarter_px
-   od_mm = pipe_width_px × mm_per_px
-   od_in = od_mm / 25.4
-
-4. Identify material and grade from: color, texture, surface finish, any stamped text or markings.
-
-Reply ONLY with this JSON (no markdown, no extra text):
-{
-  "mode": "topdown",
-  "quarter_px": 142,
-  "pipe_px": 287,
-  "od_mm": 49.1,
-  "od_in": 1.933,
-  "material": "PVC",
-  "grade": "Schedule 40",
-  "standard": "ASTM D1785",
-  "confidence": 88,
-  "size_confidence": 85,
-  "notes": "White plastic, printed markings visible on surface."
-}
-
-material options: Copper, PVC, CPVC, PEX-A (Uponor/expansion system), PEX-B (crimp/clamp), PEX, Galvanized Steel, Cast Iron, ABS, Black Steel, AC Pipe, Vitrified Clay, Orangeburg, Ductile Iron, Concrete, Terra Cotta, West Coast Clay, SDR 35 Sewer, Polybutylene, Lead
-PEX identification: PEX-A is typically red/blue/white flexible tubing used with expansion rings; PEX-B is similar but uses crimp or clamp rings. If markings visible (F1960=PEX-A, F1807/F2080=PEX-B), use those.
-If quarter is not clearly visible, set quarter_px to 0 and note in notes field.`;
-}
-
-function buildCrossSectionPrompt() {
-  return `You are a precision measurement expert and master plumber.
-
-SHOOTING MODE: CROSS-SECTION
-The camera is pointing at the cut end of a pipe, showing its circular cross-section.
-A US quarter coin (exact OD: 24.26mm / 0.9550") is placed flat beside the pipe end, in the same plane.
-
-MEASUREMENT TASK:
-1. Locate the quarter in the image. Measure its diameter in pixels.
-   The quarter and pipe end are in the same focal plane — no parallax correction needed.
-
-2. Locate the outer edge of the pipe circle. Measure the outside diameter in pixels.
-
-3. If visible, measure the inside diameter in pixels (the hole or inner bore).
-   wall_thickness_mm = (od_mm - id_mm) / 2
-
-4. Calculate:
-   mm_per_px = 24.26 / quarter_px
-   od_mm = outer_pipe_px × mm_per_px
-   id_mm = inner_pipe_px × mm_per_px (if visible)
-   wall_mm = (od_mm - id_mm) / 2 (if both visible)
-
-5. Identify material and grade. For copper: wall thickness identifies grade
-   (Type K > Type L > Type M). For PVC: color (white=Sch40, grey=Sch80).
-
-Reply ONLY with this JSON (no markdown, no extra text):
-{
-  "mode": "crosssection",
-  "quarter_px": 156,
-  "outer_px": 298,
-  "inner_px": 258,
-  "od_mm": 33.8,
-  "od_in": 1.331,
-  "id_mm": 29.2,
-  "wall_mm": 2.3,
-  "material": "Copper",
-  "grade": "Type L",
-  "standard": "ASTM B88",
-  "confidence": 92,
-  "size_confidence": 90,
-  "notes": "Orange-brown color, wall thickness of 2.3mm consistent with Type L at this diameter."
-}
-
-material options: Copper, PVC, CPVC, PEX-A (Uponor/expansion system), PEX-B (crimp/clamp), PEX, Galvanized Steel, Cast Iron, ABS, Black Steel, AC Pipe, Vitrified Clay, Orangeburg, Ductile Iron, Concrete, Terra Cotta, West Coast Clay, SDR 35 Sewer, Polybutylene, Lead
-PEX identification: PEX-A is typically red/blue/white flexible tubing used with expansion rings; PEX-B is similar but uses crimp or clamp rings. If markings visible (F1960=PEX-A, F1807/F2080=PEX-B), use those.
-If quarter not visible, set quarter_px to 0 and note it.`;
-}
-
-/* ─── Frame analysis for lock-on ────────────────────────────────
-   Samples contrast at the two green edge lines.
-   Returns 0-100 score.
-─────────────────────────────────────────────────────────────── */
-function analyzeFrame(video, canvas, vfW, vfH) {
-  if (!video || !canvas || !vfW || !vfH) return 0;
-  if (video.readyState < 2) return 0;
-  const vw = video.videoWidth, vh = video.videoHeight;
-  if (!vw || !vh) return 0;
-
-  const scaleX = vw / vfW, scaleY = vh / vfH;
-  const lxVid  = Math.round(vfW * 0.22 * scaleX);
-  const rxVid  = Math.round(vfW * 0.78 * scaleX);
-
-  canvas.width = vw; canvas.height = vh;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  ctx.drawImage(video, 0, 0, vw, vh);
-
-  const rowStart = Math.round(vh * 0.20);
-  const rowEnd   = Math.round(vh * 0.80);
-  const rowStep  = Math.max(1, Math.round((rowEnd - rowStart) / 20));
-  const halfW    = Math.max(2, Math.round(vw * 0.025));
-
-  let totalContrast = 0, totalColor = 0, n = 0;
-
-  for (const cx of [lxVid, rxVid]) {
-    for (let y = rowStart; y < rowEnd; y += rowStep) {
-      const x0 = Math.max(0, cx - halfW);
-      const x1 = Math.min(vw - 1, cx + halfW);
-      const d  = ctx.getImageData(x0, y, x1 - x0 + 1, 1).data;
-      const bs = [];
-      for (let i = 0; i < d.length; i += 4)
-        bs.push(0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]);
-      totalContrast += (Math.max(...bs) - Math.min(...bs)) / 255;
-
-      const pIn  = ctx.getImageData(Math.max(0, cx - 3), y, 1, 1).data;
-      const pOut = ctx.getImageData(Math.min(vw-1, cx + 3), y, 1, 1).data;
-      totalColor += (Math.abs(pIn[0]-pOut[0]) + Math.abs(pIn[1]-pOut[1]) + Math.abs(pIn[2]-pOut[2])) / (3*255);
-      n++;
-    }
-  }
-
-  if (!n) return 0;
-  const raw = (totalContrast/n)*0.6 + (totalColor/n)*0.4;
-  const lo = 0.08, hi = 0.35;
-  return Math.round(Math.max(0, Math.min(1, (raw-lo)/(hi-lo))) * 100);
-}
-
 /* ─── CSS ────────────────────────────────────────────────────── */
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 :root {
   --blk:#0c0c0c; --blk2:#141414; --blk3:#1c1c1c; --blk4:#262626;
-  --red:#cc2020; --redhi:#e83030;
+  --red:#cc2020; --redhi:#e83030;          /* danger only */
+  --cop:#c9793c; --cophi:#de9757;          /* accent — copper */
   --grn:#22c55e; --grnhi:#4ade80;
   --yel:#f5c518;
   --wht:#f0ebe0; --w80:rgba(240,235,224,.80); --w50:rgba(240,235,224,.50);
-  --w25:rgba(240,235,224,.25); --w12:rgba(240,235,224,.12); --w06:rgba(240,235,224,.06);
+  --w40:rgba(240,235,224,.40); --w25:rgba(240,235,224,.25); --w12:rgba(240,235,224,.12); --w06:rgba(240,235,224,.06);
   --bdr:rgba(240,235,224,.14); --bdr2:rgba(240,235,224,.25);
   --r:4px; --rm:8px;
   /* Mobile-first type scale — all sizes defined here, override for desktop */
@@ -424,22 +283,18 @@ select,input,textarea{font-family:'JetBrains Mono',monospace;font-size:var(--fs-
 
 @keyframes spin    {to{transform:rotate(360deg)}}
 @keyframes up      {from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
-@keyframes flashin {0%{opacity:0;transform:scale(.93)}60%{transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
-@keyframes beam    {0%{top:-4%}100%{top:106%}}
 div::-webkit-scrollbar { display:none; }
 
 .slidein {animation:up .3s cubic-bezier(.22,.68,0,1.15) both}
-.flashin {animation:flashin .36s cubic-bezier(.22,.68,0,1.2) both}
 
 .stripe{background:repeating-linear-gradient(-45deg,var(--yel) 0px,var(--yel) 9px,var(--blk) 9px,var(--blk) 18px)}
-.redbar{background:var(--red);font-family:'Barlow Condensed',sans-serif;font-weight:900;font-style:italic;letter-spacing:.05em;text-transform:uppercase}
 
-.btn-fire{background:var(--red);color:var(--wht);font-family:'Barlow Condensed',sans-serif;
-  font-weight:900;font-style:italic;font-size:22px;letter-spacing:.06em;text-transform:uppercase;
+.btn-fire{background:var(--cop);color:var(--blk);font-family:'Barlow Condensed',sans-serif;
+  font-weight:800;font-size:21px;letter-spacing:.06em;text-transform:uppercase;
   border:none;border-radius:var(--r);padding:17px 20px;width:100%;cursor:pointer;
   transition:background .12s,transform .1s;display:flex;align-items:center;justify-content:center;gap:10px;
   min-height:var(--touch)}
-.btn-fire:hover{background:var(--redhi)}
+.btn-fire:hover{background:var(--cophi)}
 .btn-fire:active{transform:scale(.97)}
 .btn-fire:disabled{opacity:.35;cursor:not-allowed;transform:none}
 
@@ -448,378 +303,12 @@ div::-webkit-scrollbar { display:none; }
   min-height:var(--touch)}
 .btn-ghost:hover{background:var(--w06)}
 
-.scanfx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.scanfx::after{content:'';position:absolute;left:0;right:0;height:2px;top:0;
-  background:linear-gradient(90deg,transparent,rgba(34,197,94,.8),transparent);
-  animation:beam 2.8s linear infinite}
-.redtop{height:3px;background:var(--red);flex-shrink:0}
+.redtop{height:2px;background:var(--cop);flex-shrink:0}
 .body-text{font-size:15px;color:var(--w80);line-height:1.5}
 .body-muted{font-size:15px;color:var(--w50);line-height:1.5}
 
 `;
 
-/* ─── Viewfinder overlays ────────────────────────────────────── */
-
-/* TOP-DOWN: two vertical green lines, quarter dot on top */
-function TopDownOverlay({W, H, score}) {
-  if (!W || !H) return null;
-  const lx   = Math.round(W * 0.22);
-  const rx   = Math.round(W * 0.78);
-  const span = rx - lx;
-  const qr   = Math.round(span * 0.212 / 2);
-  const qcx  = Math.round(W * 0.50);
-  const qcy  = Math.round(H * 0.28);
-  const lineCol = score >= 80
-    ? `rgba(74,222,128,${0.85 + score/700})`
-    : `rgba(34,197,94,0.88)`;
-
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}
-      style={{position:"absolute",inset:0,pointerEvents:"none"}}>
-      {/* Dim zones */}
-      <rect x={0}   y={0} width={lx}   height={H} fill="rgba(0,0,0,.30)"/>
-      <rect x={rx}  y={0} width={W-rx} height={H} fill="rgba(0,0,0,.30)"/>
-
-      {/* Left line */}
-      <line x1={lx} y1={0} x2={lx} y2={H} stroke={lineCol} strokeWidth="3"/>
-      <polygon points={`${lx},10 ${lx-9},28 ${lx+9},28`} fill={lineCol}/>
-      <polygon points={`${lx},${H-10} ${lx-9},${H-28} ${lx+9},${H-28}`} fill={lineCol}/>
-
-      {/* Right line */}
-      <line x1={rx} y1={0} x2={rx} y2={H} stroke={lineCol} strokeWidth="3"/>
-      <polygon points={`${rx},10 ${rx-9},28 ${rx+9},28`} fill={lineCol}/>
-      <polygon points={`${rx},${H-10} ${rx-9},${H-28} ${rx+9},${H-28}`} fill={lineCol}/>
-
-      {/* EDGE labels */}
-      {[{x:lx,right:true},{x:rx,right:false}].map((p,i)=>(
-        <g key={i}>
-          <rect x={p.right?p.x-46:p.x+4} y={H*.55-11} width={44} height={20}
-            fill="rgba(0,0,0,.72)" rx={2}/>
-          <text x={p.right?p.x-24:p.x+26} y={H*.55+3}
-            textAnchor="middle" fontSize="10"
-            fontFamily="'Barlow Condensed',sans-serif"
-            fontWeight="800" letterSpacing="2" fill={lineCol}>EDGE</text>
-        </g>
-      ))}
-
-      {/* OD span arrow */}
-      <line x1={lx} y1={H*.42} x2={rx} y2={H*.42}
-        stroke="rgba(34,197,94,.3)" strokeWidth="1" strokeDasharray="5 4"/>
-      <polygon points={`${lx},${H*.42} ${lx+10},${H*.42-5} ${lx+10},${H*.42+5}`}
-        fill="rgba(34,197,94,.45)"/>
-      <polygon points={`${rx},${H*.42} ${rx-10},${H*.42-5} ${rx-10},${H*.42+5}`}
-        fill="rgba(34,197,94,.45)"/>
-      <rect x={W/2-24} y={H*.42-18} width={48} height={14} fill="rgba(0,0,0,.7)" rx={2}/>
-      <text x={W/2} y={H*.42-7} textAnchor="middle" fontSize="9"
-        fontFamily="'Barlow Condensed',sans-serif" fontWeight="800"
-        letterSpacing="2" fill="rgba(34,197,94,.7)">PIPE OD</text>
-
-      {/* Quarter dot — upper area, represents coin on top of pipe */}
-      <circle cx={qcx} cy={qcy} r={qr+7} fill="rgba(34,197,94,.07)"/>
-      <circle cx={qcx} cy={qcy} r={qr}
-        fill="rgba(34,197,94,.14)" stroke="#22c55e" strokeWidth="2.5"/>
-      <circle cx={qcx} cy={qcy} r={qr-5}
-        fill="none" stroke="rgba(34,197,94,.3)" strokeWidth="1" strokeDasharray="3 2"/>
-      <line x1={qcx-qr*.45} y1={qcy} x2={qcx+qr*.45} y2={qcy}
-        stroke="#22c55e" strokeWidth="1.5" strokeOpacity=".5"/>
-      <line x1={qcx} y1={qcy-qr*.45} x2={qcx} y2={qcy+qr*.45}
-        stroke="#22c55e" strokeWidth="1.5" strokeOpacity=".5"/>
-      <rect x={qcx-44} y={qcy-qr-22} width={88} height={17}
-        fill="rgba(0,0,0,.72)" rx={2}/>
-      <text x={qcx} y={qcy-qr-8} textAnchor="middle" fontSize="10"
-        fontFamily="'Barlow Condensed',sans-serif" fontWeight="800"
-        letterSpacing="2" fill="#22c55e">QUARTER ON PIPE</text>
-      <text x={qcx} y={qcy+qr+16} textAnchor="middle" fontSize="9"
-        fontFamily="'JetBrains Mono',monospace" fill="rgba(34,197,94,.55)">24.26 mm</text>
-    </svg>
-  );
-}
-
-/* CROSS-SECTION: circle target for pipe end, quarter dot beside */
-function CrossSectionOverlay({W, H, score}) {
-  if (!W || !H) return null;
-  const cx  = Math.round(W * 0.50);
-  const cy  = Math.round(H * 0.45);
-  const cr  = Math.round(Math.min(W, H) * 0.30); // pipe circle guide
-  const qr  = Math.round(cr * 0.212);             // quarter ~21% of pipe
-  const qcx = Math.round(W * 0.82);               // quarter to the right
-  const qcy = cy;
-  const ringCol = score >= 80 ? "rgba(74,222,128,.9)" : "rgba(34,197,94,.82)";
-
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}
-      style={{position:"absolute",inset:0,pointerEvents:"none"}}>
-      {/* Dim outside pipe circle */}
-      <defs>
-        <mask id="circmask">
-          <rect width={W} height={H} fill="white"/>
-          <circle cx={cx} cy={cy} r={cr} fill="black"/>
-        </mask>
-      </defs>
-      <rect width={W} height={H} fill="rgba(0,0,0,.30)" mask="url(#circmask)"/>
-
-      {/* Pipe end circle guide */}
-      <circle cx={cx} cy={cy} r={cr}
-        fill="none" stroke={ringCol} strokeWidth="2.5" strokeDasharray="10 5"/>
-      {/* Inner wall hint */}
-      <circle cx={cx} cy={cy} r={Math.round(cr*.82)}
-        fill="none" stroke="rgba(34,197,94,.25)" strokeWidth="1.5" strokeDasharray="6 5"/>
-
-      {/* Crosshair */}
-      <line x1={cx-cr} y1={cy} x2={cx+cr} y2={cy}
-        stroke="rgba(34,197,94,.3)" strokeWidth="1"/>
-      <line x1={cx} y1={cy-cr} x2={cx} y2={cy+cr}
-        stroke="rgba(34,197,94,.3)" strokeWidth="1"/>
-
-      {/* OD diameter label */}
-      <line x1={cx-cr} y1={cy+cr+18} x2={cx+cr} y2={cy+cr+18}
-        stroke="rgba(34,197,94,.4)" strokeWidth="1"
-        strokeDasharray="4 3"/>
-      <polygon points={`${cx-cr},${cy+cr+18} ${cx-cr+10},${cy+cr+13} ${cx-cr+10},${cy+cr+23}`}
-        fill="rgba(34,197,94,.5)"/>
-      <polygon points={`${cx+cr},${cy+cr+18} ${cx+cr-10},${cy+cr+13} ${cx+cr-10},${cy+cr+23}`}
-        fill="rgba(34,197,94,.5)"/>
-      <rect x={cx-20} y={cy+cr+22} width={40} height={14} fill="rgba(0,0,0,.7)" rx={2}/>
-      <text x={cx} y={cy+cr+33} textAnchor="middle" fontSize="9"
-        fontFamily="'Barlow Condensed',sans-serif" fontWeight="800"
-        letterSpacing="2" fill="rgba(34,197,94,.7)">OD</text>
-
-      {/* ALIGN PIPE label */}
-      <rect x={cx-52} y={cy-13} width={104} height={26} rx={13}
-        fill="rgba(0,0,0,.0)"/>
-      <text x={cx} y={cy+5} textAnchor="middle" fontSize="11"
-        fontFamily="'Barlow Condensed',sans-serif" fontWeight="800"
-        letterSpacing="2" fill="rgba(34,197,94,.35)">ALIGN PIPE END</text>
-
-      {/* Quarter circle — beside the pipe */}
-      {qcx + qr < W - 4 && (
-        <g>
-          <circle cx={qcx} cy={qcy} r={qr+6} fill="rgba(34,197,94,.07)"/>
-          <circle cx={qcx} cy={qcy} r={qr}
-            fill="rgba(34,197,94,.14)" stroke="#22c55e" strokeWidth="2"/>
-          <circle cx={qcx} cy={qcy} r={qr-3}
-            fill="none" stroke="rgba(34,197,94,.25)"
-            strokeWidth="1" strokeDasharray="2 2"/>
-          <line x1={qcx-qr*.5} y1={qcy} x2={qcx+qr*.5} y2={qcy}
-            stroke="#22c55e" strokeWidth="1.2" strokeOpacity=".5"/>
-          <line x1={qcx} y1={qcy-qr*.5} x2={qcx} y2={qcy+qr*.5}
-            stroke="#22c55e" strokeWidth="1.2" strokeOpacity=".5"/>
-          <text x={qcx} y={qcy+qr+14} textAnchor="middle" fontSize="8"
-            fontFamily="'JetBrains Mono',monospace" fill="rgba(34,197,94,.55)">
-            QUARTER
-          </text>
-        </g>
-      )}
-    </svg>
-  );
-}
-
-/* ─── Full-screen danger alert ──────────────────────────────────
-   Shown when a dangerous pipe is identified.
-   Requires explicit user confirmation before dismissing.
-─────────────────────────────────────────────────────────────── */
-function DangerAlert({danger, onConfirm}) {
-  const [confirmed, setConfirmed] = useState(false);
-  const [typed,     setTyped]     = useState("");
-  const lvl = DANGER_LEVEL[danger.level];
-  const isGas = danger.level === "GAS";
-  const isHealth = danger.level === "LEAD" || danger.level === "HAZMAT";
-  const needsTyped = isGas || isHealth;
-
-  return (
-    <div style={{position:"fixed",inset:0,zIndex:999,
-      background:"rgba(0,0,0,.96)",
-      display:"flex",flexDirection:"column",
-      overflowY:"auto",WebkitOverflowScrolling:"touch",minHeight:0}}>
-
-      {/* Flashing top stripe */}
-      <div style={{height:6,background:lvl.color,
-        animation:"pulse 1s ease-in-out infinite"}}/>
-
-      <div style={{padding:"24px 20px 40px",flex:1}}>
-        {/* Icon + level badge */}
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:52,marginBottom:12}}>{lvl.icon}</div>
-          <div style={{display:"inline-block",padding:"6px 18px",
-            borderRadius:3,background:lvl.bg,
-            border:`2px solid ${lvl.color}`}}>
-            <BC c={lvl.label} s={{fontSize:19,fontWeight:900,
-              letterSpacing:".1em",color:lvl.color}}/>
-          </div>
-        </div>
-
-        {/* Pipe name */}
-        <BC c={danger.material} s={{fontSize:24,fontWeight:900,
-          display:"block",textAlign:"center",marginBottom:4,color:"var(--wht)"}}/>
-        {danger.aka&&(
-          <div style={{fontSize:16,color:"var(--w50)",
-            textAlign:"center",marginBottom:20}}>{danger.aka}</div>
-        )}
-
-        {/* Emergency box for gas */}
-        {danger.emergency&&(
-          <div style={{padding:"14px 16px",borderRadius:"var(--r)",
-            background:"rgba(239,68,68,.2)",
-            border:"2px solid #ef4444",
-            marginBottom:16,textAlign:"center"}}>
-            <BC c="⚠ EMERGENCY RESPONSE" s={{fontSize:15,fontWeight:900,
-              color:"#ef4444",letterSpacing:".1em",display:"block",marginBottom:6}}/>
-            <div style={{fontSize:17,color:"#ffaaaa",lineHeight:1.6,fontWeight:600}}>
-              {danger.emergency}
-            </div>
-          </div>
-        )}
-
-        {/* Health note for lead */}
-        {danger.health_note&&(
-          <div style={{padding:"12px 14px",borderRadius:"var(--r)",
-            background:"rgba(239,68,68,.12)",
-            border:"1px solid rgba(239,68,68,.4)",
-            marginBottom:16}}>
-            <BC c="Health Advisory" s={{fontSize:15,fontWeight:900,
-              color:"#ef4444",letterSpacing:".1em",display:"block",marginBottom:4}}/>
-            <div style={{fontSize:15,color:"#ffaaaa",lineHeight:1.6}}>
-              {danger.health_note}
-            </div>
-          </div>
-        )}
-
-        {/* Why dangerous */}
-        <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
-          border:`1px solid ${lvl.border}`,padding:"13px 14px",marginBottom:14}}>
-          <BC c="Why this is dangerous" s={{fontSize:14,fontWeight:800,
-            color:lvl.color,letterSpacing:".1em",textTransform:"uppercase",
-            display:"block",marginBottom:6}}/>
-          <div style={{fontSize:16,color:"var(--w80)",lineHeight:1.6}}>
-            {danger.why_dangerous}
-          </div>
-        </div>
-
-        {/* Status */}
-        <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
-          border:"1px solid var(--bdr2)",padding:"11px 14px",marginBottom:14}}>
-          <BC c="Current status" s={{fontSize:14,fontWeight:800,
-            color:"var(--w50)",letterSpacing:".1em",textTransform:"uppercase",
-            display:"block",marginBottom:5}}/>
-          <div style={{fontSize:16,color:"var(--w80)",lineHeight:1.5}}>
-            {danger.status}
-          </div>
-        </div>
-
-        {/* Required actions */}
-        <div style={{marginBottom:14}}>
-          <BC c="Required actions" s={{fontSize:14,fontWeight:800,
-            color:lvl.color,letterSpacing:".1em",textTransform:"uppercase",
-            display:"block",marginBottom:8}}/>
-          {danger.action.map((a,i)=>(
-            <div key={i} style={{display:"flex",gap:10,
-              background:"var(--blk2)",borderRadius:"var(--r)",
-              border:`1px solid ${lvl.border}`,
-              padding:"9px 12px",marginBottom:6}}>
-              <BC c={String(i+1).padStart(2,"0")}
-                s={{fontSize:15,fontWeight:900,color:lvl.color,
-                  flexShrink:0,paddingTop:1}}/>
-              <div style={{fontSize:16,color:"var(--w80)",lineHeight:1.5}}>{a}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Notify */}
-        {danger.notify&&(
-          <div style={{padding:"10px 14px",borderRadius:"var(--r)",
-            background:"rgba(245,158,11,.1)",
-            border:"1px solid rgba(245,158,11,.35)",marginBottom:14}}>
-            <BC c="Notification required" s={{fontSize:14,fontWeight:800,
-              color:"var(--yel)",letterSpacing:".1em",display:"block",marginBottom:4}}/>
-            <div style={{fontSize:15,color:"rgba(255,220,100,.85)",lineHeight:1.5}}>
-              {danger.notify}
-            </div>
-          </div>
-        )}
-
-        {/* Confirmation */}
-        <div style={{background:"var(--blk3)",borderRadius:"var(--r)",
-          border:`2px solid ${lvl.color}`,padding:"16px",marginBottom:16}}>
-          <BC c="Confirm you have read this warning"
-            s={{fontSize:15,fontWeight:900,color:lvl.color,
-              display:"block",marginBottom:12,letterSpacing:".02em"}}/>
-
-          {needsTyped ? (
-            <>
-              <div style={{fontSize:15,color:"var(--w50)",marginBottom:10}}>
-                Type <Mono c="I UNDERSTAND" s={{color:lvl.color}}/> to continue
-              </div>
-              <input
-                type="text"
-                placeholder="Type I UNDERSTAND"
-                value={typed}
-                onChange={e=>setTyped(e.target.value.toUpperCase())}
-                style={{width:"100%",padding:"11px 12px",borderRadius:"var(--r)",
-                  background:"var(--blk)",border:`1px solid ${lvl.border}`,
-                  color:"var(--wht)",fontSize:17,outline:"none",
-                  fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
-                  letterSpacing:".06em",marginBottom:10}}
-              />
-              <button
-                disabled={typed!=="I UNDERSTAND"}
-                onClick={onConfirm}
-                style={{width:"100%",padding:14,borderRadius:"var(--r)",
-                  background:typed==="I UNDERSTAND"?lvl.color:"var(--blk4)",
-                  border:"none",color:typed==="I UNDERSTAND"?"#0c0c0c":"var(--w25)",
-                  fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,
-                  fontSize:19,letterSpacing:".06em",cursor:"pointer",
-                  transition:"background .2s"}}>
-                I UNDERSTAND — VIEW RESULTS
-              </button>
-            </>
-          ) : (
-            <button onClick={onConfirm}
-              style={{width:"100%",padding:14,borderRadius:"var(--r)",
-                background:lvl.color,border:"none",color:"#0c0c0c",
-                fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,
-                fontSize:19,letterSpacing:".06em",cursor:"pointer"}}>
-              I UNDERSTAND — VIEW RESULTS
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Lock ring ─────────────────────────────────────────────── */
-function LockRing({score, size=80}) {
-  const R     = size/2 - 6;
-  const cx    = size/2, cy = size/2;
-  const circ  = 2*Math.PI*R;
-  const fill  = circ*(score/100);
-  const col   = score>=100?"#4ade80":score>=60?"#22c55e":"#22c55e";
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={cx} cy={cy} r={R}
-        fill="none" stroke="rgba(240,235,224,.1)" strokeWidth="5"/>
-      {score>0&&(
-        <circle cx={cx} cy={cy} r={R}
-          fill="none" stroke={col} strokeWidth="5"
-          strokeLinecap="round"
-          strokeDasharray={`${fill} ${circ-fill}`}
-          strokeDashoffset={circ*0.25}
-          style={{transition:"stroke-dasharray .1s ease,stroke .2s"}}/>
-      )}
-      {score>=100
-        ? <polyline points={`${cx-9},${cy+1} ${cx-3},${cy+7} ${cx+10},${cy-7}`}
-            fill="none" stroke="#4ade80" strokeWidth="3"
-            strokeLinecap="round" strokeLinejoin="round"/>
-        : <text x={cx} y={cy+4} textAnchor="middle" fontSize="14"
-            fontFamily="'Barlow Condensed',sans-serif" fontWeight="900"
-            fill={score>0?col:"rgba(240,235,224,.25)"}>{score}</text>
-      }
-    </svg>
-  );
-}
-
-/* ─── Helpers ────────────────────────────────────────────────── */
 const Mono = ({c,s={}}) => <span className="mono" style={s}>{c}</span>;
 const BC   = ({c,s={}}) => <span className="bc"   style={s}>{c}</span>;
 const SectionLabel = ({c}) => (
@@ -827,8 +316,6 @@ const SectionLabel = ({c}) => (
     textTransform:"uppercase",display:"block",marginBottom:8,fontWeight:700}}/>
 );
 
-function loadHist(){try{return JSON.parse(localStorage.getItem("pid_h")||"[]");}catch{return[];}}
-function saveHist(e){const h=loadHist();h.unshift(e);localStorage.setItem("pid_h",JSON.stringify(h.slice(0,40)));}
 
 /* ═══════════════════════════════════════════════════════════ */
 
@@ -840,45 +327,15 @@ function saveHist(e){const h=loadHist();h.unshift(e);localStorage.setItem("pid_h
 ═══════════════════════════════════════════════════════════ */
 /* ─── Onboarding feature cards ─────────────────────────────── */
 const ONBOARD_FEATURES = [
-  {icon:"📷", title:"Scan any pipe",          body:"AI identifies material, grade, and OD in seconds using your phone camera."},
   {icon:"📏", title:"No calipers needed",     body:"Wrap a string around the pipe, measure it, enter the length — get the OD."},
   {icon:"⚠️",  title:"Hazmat detection",       body:"Automatically flags Kitec, polybutylene, lead, and other dangerous materials."},
   {icon:"🔧", title:"Part numbers + where to buy", body:"Real part numbers and retailer links for fittings that fit your exact pipe."},
 ];
 
+
 export default function App() {
-  /* ── Screens: home | scan | result | fittings | connect | reference | history */
-  const [screen,   setScreen]   = useState("home");
-  const [scanMode, setScanMode] = useState("topdown"); // topdown | xsection
-
-  /* ── API key */
-  const [apiKey,   setApiKey]   = useState(() => localStorage.getItem("pid_k") || "");
-  const [showKey,  setShowKey]  = useState(false);
-  const [keyDraft, setKeyDraft] = useState("");
-
-  /* ── Camera refs */
-  const videoRef    = useRef();
-  const hiddenCvs   = useRef();
-  const analysisCvs = useRef(document.createElement("canvas"));
-  const vfRef       = useRef();
-  const streamRef   = useRef();
-  const rafRef      = useRef();
-  const holdTimer   = useRef(null);
-  const didCapture  = useRef(false);
-  const smoothScore = useRef(0);
-
-  /* ── Viewfinder size */
-  const [vfSize, setVfSize] = useState({w:0,h:0});
-
-  /* ── Scan state */
-  const [photo,     setPhoto]     = useState(null);
-  const [lockScore, setLockScore] = useState(0);
-  const [result,    setResult]    = useState(null);
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState(null);
-
-  /* ── History */
-  const [history, setHistory] = useState(loadHist);
+  /* ── Screens: home | fittings | connect | reference */
+  const [screen, setScreen] = useState("home");
 
   /* ── First launch onboarding */
   const [showOnboard, setShowOnboard] = useState(() => {
@@ -889,222 +346,14 @@ export default function App() {
     setShowOnboard(false);
   };
 
-  /* ── Danger alert dismissed flag */
-  const [dangerDismissed, setDangerDismissed] = useState(false);
-
   /* ── Navigation ─────────────────────────────────────────────
      Single function. Passed as a prop to every screen.
      No closures. Always works.
   ─────────────────────────────────────────────────────────── */
-  const navigate = useCallback((id) => {
-    if (id === "scan") {
-      setScanMode("topdown");
-      if (photo) { setPhoto(null); setResult(null); setError(null); setLockScore(0); didCapture.current = false; }
-      setScreen("scan");
-    } else if (id === "xsection") {
-      setScanMode("xsection");
-      if (photo) { setPhoto(null); setResult(null); setError(null); setLockScore(0); didCapture.current = false; }
-      setScreen("scan");
-    } else {
-      setScreen(id);
-    }
-  }, [photo]);
-
-  /* ── Viewfinder sizing
-     Depends on `screen` — vfRef only exists when screen==="scan".
-     Without this dependency, vfSize stays {w:0,h:0} on first navigation
-     and the overlay + lock-on loop never activate. */
-  useEffect(() => {
-    if (screen !== "scan") return;
-    const measure = () => {
-      const el = vfRef.current; if (!el) return;
-      const { width, height } = el.getBoundingClientRect();
-      if (width > 0 && height > 0)
-        setVfSize({ w: Math.round(width), h: Math.round(height) });
-    };
-    const t = setTimeout(measure, 50); // wait for DOM layout after navigation
-    const ro = new ResizeObserver(measure);
-    if (vfRef.current) ro.observe(vfRef.current);
-    return () => { clearTimeout(t); ro.disconnect(); };
-  }, [screen]);
-
-  /* ── Camera start/stop */
-  const startCam = useCallback(async () => {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-      });
-      streamRef.current = s;
-      if (videoRef.current) { videoRef.current.srcObject = s; videoRef.current.play(); }
-    } catch { alert("Camera access denied — please allow camera and reload."); }
-  }, []);
-
-  const stopCam = useCallback(() => {
-    cancelAnimationFrame(rafRef.current);
-    clearTimeout(holdTimer.current);
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    if (screen === "scan" && !photo) startCam();
-    else stopCam();
-    return stopCam;
-  }, [screen, photo]);
-
-  /* ── Capture */
-  const capture = useCallback(() => {
-    if (didCapture.current) return;
-    didCapture.current = true;
-    cancelAnimationFrame(rafRef.current);
-    const v = videoRef.current, c = hiddenCvs.current;
-    if (!v || !c) return;
-    c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext("2d").drawImage(v, 0, 0);
-    const dataUrl = c.toDataURL("image/jpeg", 0.93);
-    navigator.vibrate?.(100);
-    setPhoto({ dataUrl, b64: dataUrl.split(",")[1], w: c.width, h: c.height });
-    setLockScore(100);
-    setResult(null); setError(null);
-    stopCam();
-  }, [stopCam]);
-
-  /* ── Retake */
-  const retake = useCallback(() => {
-    setPhoto(null); setResult(null); setError(null);
-    setLockScore(0); didCapture.current = false;
-    smoothScore.current = 0;
-    startCam();
-  }, [startCam]);
-
-  /* ── Lock-on analysis loop */
-  useEffect(() => {
-    if (screen !== "scan" || photo) return;
-    if (!vfSize.w || !vfSize.h) return; // wait for viewfinder to be measured
-    didCapture.current = false;
-    smoothScore.current = 0;
-    clearTimeout(holdTimer.current);
-
-    const loop = () => {
-      const raw = analyzeFrame(videoRef.current, analysisCvs.current, vfSize.w, vfSize.h);
-      smoothScore.current = smoothScore.current * 0.80 + raw * 0.20;
-      const display = Math.round(smoothScore.current);
-      setLockScore(display);
-      if (display >= 90) {
-        if (!holdTimer.current) {
-          holdTimer.current = setTimeout(() => {
-            if (smoothScore.current >= 85) capture();
-          }, 900);
-        }
-      } else {
-        clearTimeout(holdTimer.current);
-        holdTimer.current = null;
-      }
-      rafRef.current = requestAnimationFrame(loop);
-    };
-    const t = setTimeout(() => { rafRef.current = requestAnimationFrame(loop); }, 400);
-    return () => { clearTimeout(t); cancelAnimationFrame(rafRef.current); clearTimeout(holdTimer.current); holdTimer.current = null; };
-  }, [screen, photo, vfSize, capture]);
-
-  /* ── OD calculation */
-  const computeOD = useCallback(() => {
-    const { w } = vfSize; if (!w) return null;
-    const pipePx    = w * 0.56;
-    const quarterPx = pipePx * 0.212;
-    return (pipePx / quarterPx) * QUARTER_MM;
-  }, [vfSize]);
-
-  /* ── Identify */
-  const identify = useCallback(async () => {
-    if (!photo) return;
-    const diamMm = computeOD();
-    const matches = diamMm ? lookupOD(diamMm / 25.4) : [];
-    if (!apiKey) {
-      setResult({ diamMm, matches, aiMaterial: null, notes: null, confidence: null });
-      setScreen("result");
-      return;
-    }
-    setLoading(true); setError(null);
-    const prompt = scanMode === "topdown" ? buildTopDownPrompt() : buildCrossSectionPrompt();
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 400,
-          messages: [{ role: "user", content: [
-            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: photo.b64 } },
-            { type: "text", text: prompt },
-          ]}],
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || `Error ${res.status}`);
-      const text = data.content?.[0]?.text || "";
-      const m = text.match(/\{[\s\S]*?\}/);
-      if (!m) throw new Error("Could not parse AI response");
-      const ai = JSON.parse(m[0]);
-      let od_mm = null, od_in = null;
-      const qPx = ai.quarter_px || 0;
-      if (qPx > 10) {
-        const correctedQ = scanMode === "topdown" ? qPx * 0.97 : qPx;
-        const mmPerPx = QUARTER_MM / correctedQ;
-        od_mm = (ai.pipe_px || ai.outer_px || 0) * mmPerPx;
-        od_in = od_mm / 25.4;
-      } else {
-        od_mm = ai.od_mm || diamMm || null;
-        od_in = od_mm ? od_mm / 25.4 : null;
-      }
-      const finalMatches = od_mm ? lookupOD(od_in) : matches;
-      const r = {
-        mode: scanMode, diamMm: od_mm, od_mm: od_mm ? +od_mm.toFixed(2) : null,
-        od_in: od_in ? +od_in.toFixed(4) : null,
-        quarter_px: qPx, pipe_px: ai.pipe_px || ai.outer_px || null,
-        wall_mm: ai.wall_mm || null, id_mm: ai.id_mm || null,
-        matches: finalMatches, material: ai.material, grade: ai.grade,
-        standard: ai.standard, confidence: ai.confidence,
-        size_confidence: ai.size_confidence, notes: ai.notes,
-        noQuarter: qPx <= 10,
-      };
-      setResult(r);
-      setDangerDismissed(false);
-      saveHist({
-        id: Date.now(), ts: new Date().toISOString(), mode: scanMode,
-        od_mm: od_mm ? +od_mm.toFixed(2) : null,
-        od_in: od_in ? +od_in.toFixed(4) : null,
-        nominal: finalMatches[0]?.nominal || "?",
-        material: ai.material || "?",
-        thumb: photo.dataUrl,
-      });
-      setHistory(loadHist());
-      setScreen("result");
-    } catch (e) {
-      setError(e.message);
-      setResult({ diamMm, matches, aiMaterial: null, notes: null, confidence: null });
-      setScreen("result");
-    } finally { setLoading(false); }
-  }, [photo, apiKey, scanMode, computeOD]);
+  const navigate = useCallback((id) => { setScreen(id); }, []);
 
   /* ── Shared props passed to every screen */
-  const nav = { screen, scanMode, navigate };
-  const auth = { apiKey, setApiKey, showKey, setShowKey, keyDraft, setKeyDraft };
-
-  /* ── Scan screen vars */
-  const isXS = scanMode === "xsection";
-  const statusText =
-    lockScore >= 90 ? "Hold steady…" :
-    lockScore >= 60 ? (isXS ? "Center pipe end in circle" : "Almost — align edges") :
-    lockScore >= 30 ? "Getting closer" :
-    isXS ? "Point at pipe end · quarter beside" : "Point down at pipe · align green lines";
-
-  /* ── Danger check for result screen */
-  const danger = result ? lookupDanger(result.material) : null;
+  const nav = { screen, navigate };
 
   /* ═══════════════════════════════════════════════════════════
      RENDER
@@ -1122,7 +371,7 @@ export default function App() {
 
   if (screen === "home") return (
     <>
-      <HomeScreen {...nav} {...auth}/>
+      <HomeScreen {...nav}/>
       {showOnboard && (
         <div onClick={dismissOnboard} style={{
           position:"fixed",inset:0,background:"rgba(10,10,10,.97)",
@@ -1130,18 +379,14 @@ export default function App() {
           alignItems:"center",justifyContent:"center",
           padding:"32px 28px",cursor:"pointer",overflowY:"auto",
         }}>
-          <svg viewBox="0 0 280 90" style={{width:240,marginBottom:20}}>
-            <line x1="28" y1="8" x2="28" y2="22" stroke="#cc2020" strokeWidth="12" strokeLinecap="round"/>
-            <path d="M28 22 C70 22 82 38 82 50 C82 62 70 78 28 78" fill="none" stroke="#cc2020" strokeWidth="12" strokeLinecap="round"/>
-            <line x1="28" y1="78" x2="28" y2="82" stroke="#cc2020" strokeWidth="12" strokeLinecap="round"/>
-            <text x="90" y="58" fontFamily="Arial Black,sans-serif" fontSize="28" fontWeight="900" fill="#cc2020">ocket</text>
-            <line x1="150" y1="8" x2="150" y2="22" stroke="#1a6bbf" strokeWidth="12" strokeLinecap="round"/>
-            <path d="M150 22 C192 22 204 38 204 50 C204 62 192 78 150 78" fill="none" stroke="#1a6bbf" strokeWidth="12" strokeLinecap="round"/>
-            <line x1="150" y1="78" x2="150" y2="82" stroke="#1a6bbf" strokeWidth="12" strokeLinecap="round"/>
-            <text x="212" y="58" fontFamily="Arial Black,sans-serif" fontSize="28" fontWeight="900" fill="#1a6bbf">lumber</text>
+          <svg viewBox="0 0 64 96" style={{width:52,marginBottom:14}} aria-hidden="true">
+            <line x1="14" y1="8" x2="14" y2="88" stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
+            <path d="M14 14 C44 14 55 26 55 36 C55 46 44 58 14 58" fill="none" stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
           </svg>
+          <BC c="POCKET PLUMBER™" s={{fontSize:27,fontWeight:900,
+            letterSpacing:".03em",color:"var(--wht)",marginBottom:8}}/>
           <BC c="A contractor-grade field reference" s={{
-            fontSize:15,fontWeight:700,fontStyle:"italic",
+            fontSize:15,fontWeight:700,
             color:"rgba(240,235,224,.4)",marginBottom:28,letterSpacing:".02em"}}/>
           {ONBOARD_FEATURES.map(f=>(
             <div key={f.title} style={{
@@ -1157,10 +402,10 @@ export default function App() {
           ))}
           <div style={{
             marginTop:12,padding:"14px 48px",borderRadius:"var(--r)",
-            background:"var(--red)",cursor:"pointer",
+            background:"var(--cop)",cursor:"pointer",
             fontFamily:"'Barlow Condensed',sans-serif",
-            fontSize:22,fontWeight:900,letterSpacing:".08em",
-            color:"var(--wht)",
+            fontSize:21,fontWeight:800,letterSpacing:".08em",
+            color:"var(--blk)",
           }}>
             GET STARTED
           </div>
@@ -1171,422 +416,18 @@ export default function App() {
       )}
     </>
   );
-  if (screen === "reference") return <ReferenceScreen {...nav} {...auth}/>;
-  if (screen === "connect")   return <CompatScreen {...nav} {...auth}/>;
-  if (screen === "fittings")  return <FittingsScreen {...nav} {...auth}/>;
-  if (screen === "history")   return <HistoryScreen {...nav} {...auth} history={history} setHistory={setHistory}/>;
-
-  /* ── SCAN SCREEN ── */
-  if (screen === "scan") return (
-    <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
-      <KeyModal {...auth}/>
-      <canvas ref={hiddenCvs} style={{display:"none"}}/>
-
-      {/* Header */}
-      <div style={{flexShrink:0}}>
-        <div className="redtop"/>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-          padding:"36px 16px 10px",background:"var(--blk2)",
-          borderBottom:"1px solid var(--bdr)"}}>
-          {/* Logo */}
-          <BC c="POCKET PLUMBER™" s={{fontSize:14,fontWeight:900,
-              fontStyle:"italic",letterSpacing:".04em",color:"var(--wht)"}}/>
-          {/* Mode badge */}
-          <div style={{background:"var(--blk3)",border:"1px solid var(--bdr2)",
-            borderRadius:"3px",padding:"4px 10px"}}>
-            <BC c={isXS ? "END VIEW" : "TOP-DOWN"}
-              s={{fontSize:14,fontWeight:900,fontStyle:"italic",letterSpacing:".06em",
-                color:isXS?"var(--yel)":"var(--grn)"}}/>
-          </div>
-          {/* Right */}
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            {photo && <button className="btn-ghost" style={{fontSize:15,padding:"5px 10px"}}
-              onClick={retake}>↩ Retake</button>}
-            <AIBadge {...auth}/>
-          </div>
-        </div>
-      </div>
-
-      {/* Viewfinder */}
-      <div ref={vfRef} style={{flex:1,position:"relative",overflow:"hidden",background:"#000"}}>
-        <video ref={videoRef} playsInline muted autoPlay
-          style={{width:"100%",height:"100%",objectFit:"cover",display:photo?"none":"block"}}/>
-        {photo && <img src={photo.dataUrl} alt=""
-          style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>}
-        {!photo && <div className="scanfx"/>}
-        {isXS
-          ? <CrossSectionOverlay W={vfSize.w} H={vfSize.h} score={lockScore}/>
-          : <TopDownOverlay      W={vfSize.w} H={vfSize.h} score={lockScore}/>}
-
-        {/* Lock ring — live camera */}
-        {!photo && (
-          <div style={{position:"absolute",bottom:0,left:0,right:0,
-            display:"flex",flexDirection:"column",alignItems:"center",gap:8,
-            padding:"0 20px 28px",
-            background:"linear-gradient(transparent,rgba(0,0,0,.8))"}}>
-            <div style={{background:"rgba(12,12,12,.85)",
-              border:`1px solid ${lockScore>=80?"rgba(34,197,94,.45)":"var(--bdr)"}`,
-              borderRadius:"3px",padding:"6px 16px",transition:"border-color .3s"}}>
-              <BC c={statusText} s={{fontSize:18,fontWeight:700,
-                color:lockScore>=80?"var(--grn)":"var(--w80)",transition:"color .3s"}}/>
-            </div>
-            <button onClick={capture} aria-label="Capture pipe scan" style={{width:80,height:80,borderRadius:"50%",
-              background:"rgba(12,12,12,.7)",border:"none",padding:0,cursor:"pointer",
-              boxShadow:lockScore>=90?"0 0 28px rgba(34,197,94,.5)":"none",
-              transition:"box-shadow .3s"}}>
-              <LockRing score={lockScore} size={80}/>
-            </button>
-            <BC c="Tap to capture manually"
-              s={{fontSize:14,fontWeight:600,color:"var(--w25)",letterSpacing:".06em"}}/>
-            <button onClick={()=>navigate("reference")}
-              aria-label="Open string calculator"
-              style={{background:"none",border:"none",cursor:"pointer",
-                fontSize:14,color:"var(--w25)",letterSpacing:".06em",
-                fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,
-                padding:"2px 0",minHeight:"unset"}}>
-              No calipers? → String method
-            </button>
-          </div>
-        )}
-
-        {/* Confirm bar — photo taken */}
-        {photo && (
-          <div style={{position:"absolute",bottom:0,left:0,right:0,
-            background:"linear-gradient(transparent,rgba(0,0,0,.92))",padding:"20px 16px 16px"}}>
-            <div className="stripe" style={{height:4,borderRadius:"2px 2px 0 0",marginBottom:10}}/>
-            <BC c={isXS ? "Quarter beside pipe end · pipe centered in circle"
-                        : "Quarter on pipe · green lines on pipe edges"}
-              s={{fontSize:15,fontWeight:700,color:"var(--w80)",
-                display:"block",textAlign:"center",marginBottom:10}}/>
-            {!apiKey && (
-              <div style={{padding:"8px 12px",background:"rgba(204,32,32,.1)",
-                border:"1px solid rgba(204,32,32,.3)",borderRadius:"3px",
-                marginBottom:10,textAlign:"center",display:"flex",
-                alignItems:"center",justifyContent:"center",gap:8}}>
-                <BC c="Add API key for AI identification"
-                  s={{fontSize:15,color:"var(--w50)",fontWeight:600}}/>
-                <button onClick={()=>{setKeyDraft(""); setShowKey(true);}}
-                  style={{color:"var(--grn)",fontSize:15,fontFamily:"'Barlow Condensed',sans-serif",
-                    fontWeight:800,background:"none",border:"none",cursor:"pointer"}}>
-                  Add →
-                </button>
-              </div>
-            )}
-            <button className="btn-fire" onClick={identify} disabled={loading||!apiKey}>
-              {loading ? <><Spinner/>Identifying…</> : "Identify This Pipe"}
-            </button>
-          </div>
-        )}
-      </div>
-
-      <NavBar active="scan" scanMode={scanMode} navigate={navigate}/>
-    </div>
-  );
-
-  /* ── RESULT SCREEN ── */
-  if (screen === "result") {
-    const r = result || {};
-    const best = r.matches?.[0];
-    const isHazmat = best?.hazmat;
-    const conf = r.confidence || 0;
-    const confCol = v => v>=80?"var(--grn)":v>=55?"var(--yel)":"var(--redhi)";
-    const isXSR = r.mode === "xsection";
-
-    return (
-      <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
-        <KeyModal {...auth}/>
-
-        {/* Danger alert — full screen, must confirm */}
-        {danger && !dangerDismissed && (
-          <DangerAlert danger={danger} onConfirm={() => setDangerDismissed(true)}/>
-        )}
-
-        {/* Header */}
-        <div style={{flexShrink:0}}>
-          <div className="redtop"/>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-            padding:"36px 16px 10px",background:"var(--blk2)",
-            borderBottom:"1px solid var(--bdr)"}}>
-            <button className="btn-ghost" style={{fontSize:15,padding:"6px 12px"}}
-              onClick={() => setScreen("scan")}>← Back</button>
-            <BC c="Result" s={{fontSize:22,fontWeight:900,fontStyle:"italic"}}/>
-            <AIBadge {...auth}/>
-          </div>
-        </div>
-
-        <div className="scroll slidein" style={{flex:1,minHeight:0,padding:"16px 16px 28px",
-          display:"flex",flexDirection:"column",gap:12}}>
-
-          {error && (
-            <div style={{padding:"10px 14px",borderRadius:"3px",
-              background:"rgba(204,32,32,.1)",border:"1px solid rgba(204,32,32,.35)",
-              color:"#ff9090",fontSize:15,lineHeight:1.5}}>Error: {error}</div>
-          )}
-
-          {/* Mode + danger badges */}
-          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-            <div style={{padding:"3px 10px",borderRadius:2,
-              background:isXSR?"rgba(245,197,24,.12)":"rgba(34,197,94,.12)",
-              border:`1px solid ${isXSR?"rgba(245,197,24,.3)":"rgba(34,197,94,.3)"}`}}>
-              <BC c={isXSR?"END VIEW — CROSS SECTION":"TOP-DOWN MEASUREMENT"}
-                s={{fontSize:14,fontWeight:800,letterSpacing:".1em",
-                  color:isXSR?"var(--yel)":"var(--grn)"}}/>
-            </div>
-            {r.noQuarter && (
-              <div style={{padding:"3px 10px",borderRadius:2,
-                background:"rgba(204,32,32,.12)",border:"1px solid rgba(204,32,32,.3)"}}>
-                <BC c="QUARTER NOT FOUND — LESS ACCURATE"
-                  s={{fontSize:14,fontWeight:800,letterSpacing:".06em",color:"var(--redhi)"}}/>
-              </div>
-            )}
-          </div>
-
-          {/* OD Hero */}
-          {r.od_mm && (
-            <div className="flashin" style={{background:"var(--blk2)",
-              border:"1px solid var(--bdr2)",borderLeft:"4px solid var(--grn)",
-              borderRadius:"3px",padding:"18px 20px"}}>
-              <SectionLabel c="Measured Outside Diameter"/>
-              <div style={{display:"flex",alignItems:"flex-end",
-                justifyContent:"space-between",gap:10}}>
-                <div>
-                  <div style={{lineHeight:1}}>
-                    <BC c={r.od_mm.toFixed(1)} s={{fontSize:56,fontWeight:900,
-                      color:"var(--wht)",letterSpacing:"-.01em"}}/>
-                    <BC c=" mm" s={{fontSize:26,fontWeight:700,color:"var(--w50)"}}/>
-                  </div>
-                  <Mono c={`${r.od_in?.toFixed(4)}" `}
-                    s={{fontSize:16,color:"var(--w50)",marginTop:6,display:"block"}}/>
-                  {r.quarter_px > 0 && (
-                    <div style={{display:"flex",gap:12,marginTop:6}}>
-                      <Mono c={`quarter: ${r.quarter_px}px`} s={{fontSize:14,color:"var(--w25)"}}/>
-                      {r.pipe_px && <Mono c={`pipe: ${r.pipe_px}px`} s={{fontSize:14,color:"var(--w25)"}}/>}
-                    </div>
-                  )}
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <BC c="NOMINAL" s={{fontSize:14,fontWeight:700,color:"var(--w50)",
-                    letterSpacing:".1em",display:"block",marginBottom:4}}/>
-                  <BC c={best?.nominal||"—"}
-                    s={{fontSize:42,fontWeight:900,color:"var(--red)",lineHeight:1}}/>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Wall thickness (cross-section) */}
-          {isXSR && r.wall_mm && (
-            <div style={{background:"var(--blk2)",border:"1px solid var(--bdr2)",
-              borderLeft:"4px solid var(--yel)",borderRadius:"3px",padding:"12px 16px"}}>
-              <SectionLabel c="Wall Thickness"/>
-              <div style={{display:"flex",gap:24}}>
-                <div>
-                  <BC c={r.wall_mm.toFixed(2)} s={{fontSize:28,fontWeight:900,
-                    color:"var(--yel)",lineHeight:1}}/>
-                  <BC c=" mm" s={{fontSize:17,color:"var(--w50)"}}/>
-                </div>
-                {r.id_mm && <div>
-                  <BC c="ID" s={{fontSize:14,fontWeight:700,color:"var(--w50)",
-                    letterSpacing:".1em",display:"block"}}/>
-                  <BC c={`${r.id_mm.toFixed(1)}`} s={{fontSize:26,fontWeight:900,
-                    color:"var(--w80)",lineHeight:1}}/>
-                  <BC c="mm" s={{fontSize:15,color:"var(--w50)"}}/>
-                </div>}
-              </div>
-            </div>
-          )}
-
-          {/* Hazmat */}
-          {isHazmat && (
-            <div>
-              <div className="stripe" style={{height:5}}/>
-              <div style={{padding:"12px 14px",background:"rgba(204,32,32,.1)",
-                border:"1.5px solid var(--red)",borderTop:"none",
-                borderRadius:"0 0 3px 3px"}}>
-                <BC c="⚠ Potential Asbestos Cement Pipe — HAZMAT"
-                  s={{fontSize:17,fontWeight:900,color:"var(--redhi)",
-                    display:"block",marginBottom:6}}/>
-                <div style={{fontSize:15,color:"rgba(255,160,160,.8)",lineHeight:1.6}}>
-                  Do not cut, drill, or disturb. Licensed abatement contractor required.
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* OD matches */}
-          {r.matches?.length > 0 && (
-            <div style={{background:"var(--blk2)",border:"1px solid var(--bdr2)",
-              borderRadius:"3px",overflow:"hidden"}}>
-              <div style={{padding:"10px 14px 6px"}}><SectionLabel c="OD Table Match"/></div>
-              {r.matches.map((m,i) => {
-                const diff = r.od_in ? Math.abs(m.od - r.od_in) * 25.4 : null;
-                const dc = diff<1?"var(--grn)":diff<2?"var(--yel)":"var(--redhi)";
-                return (
-                  <div key={i} style={{padding:"12px 14px",borderTop:"1px solid var(--bdr)",
-                    background:i===0?"var(--blk3)":"var(--blk2)",
-                    display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <div>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-                        <BC c={m.nominal} s={{fontSize:24,fontWeight:900,
-                          color:i===0?"var(--wht)":"var(--w50)"}}/>
-                        {m.hazmat && <span style={{fontSize:15,padding:"3px 9px",borderRadius:2,
-                          background:"rgba(204,32,32,.18)",color:"var(--redhi)",
-                          border:"1px solid rgba(204,32,32,.35)",
-                          fontFamily:"'Barlow Condensed',sans-serif",
-                          fontWeight:800,letterSpacing:".06em"}}>⚠ HAZMAT</span>}
-                      </div>
-                      <div style={{fontSize:16,color:i===0?"var(--w80)":"var(--w50)"}}>
-                        {m.material}
-                      </div>
-                      <Mono c={`OD: ${m.od}" · ${(m.od*25.4).toFixed(1)}mm`}
-                        s={{fontSize:15,color:"var(--w50)",marginTop:3,display:"block"}}/>
-                    </div>
-                    {diff !== null && (
-                      <Mono c={`Δ ${diff.toFixed(1)}mm`} s={{fontSize:16,fontWeight:500,color:dc}}/>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Danger badge + reopen button */}
-          {danger && (
-            <div style={{padding:"10px 14px",borderRadius:"3px",
-              background:DANGER_LEVEL[danger.level].bg,
-              border:`1.5px solid ${DANGER_LEVEL[danger.level].border}`,
-              display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div>
-                <BC c={`${DANGER_LEVEL[danger.level].icon} ${DANGER_LEVEL[danger.level].label}`}
-                  s={{fontSize:16,fontWeight:900,color:DANGER_LEVEL[danger.level].color,
-                    display:"block",marginBottom:2}}/>
-                <div style={{fontSize:15,color:"var(--w50)"}}>{danger.material}</div>
-              </div>
-              <button onClick={() => setDangerDismissed(false)} style={{
-                padding:"5px 11px",borderRadius:2,cursor:"pointer",
-                background:"none",fontSize:15,
-                border:`1px solid ${DANGER_LEVEL[danger.level].border}`,
-                color:DANGER_LEVEL[danger.level].color,
-                fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800}}>
-                VIEW ⚠
-              </button>
-            </div>
-          )}
-
-          {/* AI material */}
-          {r.material && (
-            <div style={{background:"var(--blk2)",border:"1px solid var(--bdr2)",
-              borderLeft:"4px solid var(--grn)",borderRadius:"3px",padding:"14px 16px"}}>
-              <SectionLabel c="Material Identification"/>
-              <div style={{display:"flex",alignItems:"center",
-                justifyContent:"space-between",marginBottom:6}}>
-                <div>
-                  <BC c={r.material} s={{fontSize:24,fontWeight:800}}/>
-                  {r.grade && <BC c={` · ${r.grade}`}
-                    s={{fontSize:19,fontWeight:700,color:"var(--w50)"}}/>}
-                </div>
-                {conf > 0 && (
-                  <div style={{background:`${confCol(conf)}18`,
-                    border:`1px solid ${confCol(conf)}40`,
-                    borderRadius:"3px",padding:"4px 10px"}}>
-                    <Mono c={`${conf}%`} s={{fontSize:15,color:confCol(conf)}}/>
-                  </div>
-                )}
-              </div>
-              {r.standard && <Mono c={r.standard}
-                s={{fontSize:15,color:"var(--w50)",display:"block",marginBottom:6}}/>}
-              {r.notes && <div style={{fontSize:15,color:"var(--w50)",lineHeight:1.65,
-                borderTop:"1px solid var(--bdr)",paddingTop:8,marginTop:6}}>
-                {r.notes}
-              </div>}
-            </div>
-          )}
-
-          {!apiKey && !r.material && (
-            <button onClick={() => { setKeyDraft(""); setShowKey(true); }}
-              style={{padding:"12px 16px",borderRadius:"3px",
-                background:"var(--blk2)",border:"1px solid var(--bdr2)",
-                color:"var(--w50)",fontSize:17,textAlign:"center",width:"100%",
-                fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,cursor:"pointer"}}>
-              Add API Key for AI Material ID →
-            </button>
-          )}
-
-          <div className="stripe" style={{height:4,borderRadius:"3px"}}/>
-          <button className="btn-fire" onClick={retake}>Measure Another Pipe</button>
-        </div>
-
-        <NavBar active="scan" scanMode={scanMode} navigate={navigate}/>
-      </div>
-    );
-  }
+  if (screen === "reference") return <ReferenceScreen {...nav}/>;
+  if (screen === "connect")   return <CompatScreen {...nav}/>;
+  if (screen === "fittings")  return <FittingsScreen {...nav}/>;
 
   return null;
 }
-
 
 const Spinner=()=>(
   <div style={{width:20,height:20,borderRadius:"50%",
     border:"2.5px solid rgba(240,235,224,.3)",borderTopColor:"var(--wht)",
     animation:"spin .7s linear infinite"}}/>
 );
-
-function KeyModal({apiKey, setApiKey, showKey, setShowKey, keyDraft, setKeyDraft}) {
-  if(!showKey) return null;
-  return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",
-      display:"flex",alignItems:"flex-end",zIndex:200}}
-      onClick={e=>{if(e.target===e.currentTarget)setShowKey(false);}}>
-      <div style={{background:"var(--blk2)",border:"1px solid var(--bdr2)",
-        borderTop:"3px solid var(--red)",borderRadius:"4px 4px 0 0",
-        padding:"22px 22px 40px",width:"100%"}}
-        className="slidein">
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,
-          fontStyle:"italic",fontSize:24,color:"var(--wht)",
-          background:"var(--red)",padding:"6px 12px",marginBottom:16,
-          borderRadius:"3px",display:"inline-block",letterSpacing:".05em"}}>
-          API KEY
-        </div>
-        <p style={{fontSize:16,color:"var(--w50)",lineHeight:1.7,marginBottom:16}}>
-          Stored in your browser only. Get one free at{" "}
-          <span style={{color:"var(--grn)"}}>console.anthropic.com</span>.
-          Without a key, OD measurement and lookup still work great.
-        </p>
-        <input type="password" placeholder="sk-ant-api03-..." value={keyDraft}
-          onChange={e=>setKeyDraft(e.target.value)}
-          onKeyDown={e=>{if(e.key==="Enter"&&keyDraft.trim()){
-            localStorage.setItem("pid_k",keyDraft.trim());
-            setApiKey(keyDraft.trim());setShowKey(false);}}}
-          style={{width:"100%",padding:"12px 14px",borderRadius:"3px",
-            background:"var(--blk3)",border:"1px solid var(--bdr2)",
-            color:"var(--wht)",fontSize:16,outline:"none",marginBottom:12,
-            fontFamily:"'JetBrains Mono',monospace"}}
-          autoFocus/>
-        <div style={{display:"flex",gap:10}}>
-          <button style={{flex:1,border:"1.5px solid var(--bdr2)",color:"var(--w80)",
-            fontSize:16,fontWeight:600,borderRadius:"3px",padding:"9px 14px",
-            background:"none",cursor:"pointer",fontFamily:"'Barlow',sans-serif"}}
-            onClick={()=>setShowKey(false)}>Cancel</button>
-          <button style={{flex:2,background:"var(--red)",color:"var(--wht)",
-            fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontStyle:"italic",
-            fontSize:22,letterSpacing:".06em",textTransform:"uppercase",
-            border:"none",borderRadius:"3px",padding:"12px 0",cursor:"pointer"}}
-            onClick={()=>{const k=keyDraft.trim();if(!k)return;
-              localStorage.setItem("pid_k",k);setApiKey(k);setShowKey(false);}}>
-            Save Key
-          </button>
-        </div>
-        {apiKey&&<button onClick={()=>{
-          localStorage.removeItem("pid_k");setApiKey("");setShowKey(false);}}
-          style={{width:"100%",padding:10,marginTop:10,borderRadius:"3px",
-            border:"1px solid rgba(204,32,32,.4)",color:"rgba(255,100,100,.7)",
-            fontSize:15,background:"none",cursor:"pointer"}}>
-          Remove saved key
-        </button>}
-      </div>
-    </div>
-  );
-}
 
 function ScreenHeader({title, center, right, left, topBorder=true}) {
   return(
@@ -1598,7 +439,7 @@ function ScreenHeader({title, center, right, left, topBorder=true}) {
         {left||<div style={{minWidth:40}}/>}
         <div style={{flex:1,textAlign:"center"}}>
           {center||<span style={{fontFamily:"'Barlow Condensed',sans-serif",
-            fontSize:26,fontWeight:900,fontStyle:"italic"}}>{title}</span>}
+            fontSize:26,fontWeight:900}}>{title}</span>}
         </div>
         {right||<div style={{minWidth:40}}/>}
       </div>
@@ -1606,30 +447,13 @@ function ScreenHeader({title, center, right, left, topBorder=true}) {
   );
 }
 
-function AIBadge({apiKey, setApiKey, setShowKey, setKeyDraft}) {
-  return(
-    <button onClick={()=>{setKeyDraft(apiKey);setShowKey(true);}} style={{
-      display:"flex",alignItems:"center",gap:5,padding:"5px 10px",
-      borderRadius:"3px",cursor:"pointer",
-      border:`1px solid ${apiKey?"rgba(34,197,94,.4)":"var(--bdr2)"}`,
-      background:apiKey?"rgba(34,197,94,.08)":"transparent",
-      color:apiKey?"var(--grn)":"var(--w50)",
-      fontSize:14,fontFamily:"'JetBrains Mono',monospace",fontWeight:700,
-      letterSpacing:".06em",
-    }}>
-      <div style={{width:5,height:5,borderRadius:"50%",
-        background:apiKey?"var(--grn)":"var(--w25)"}}/>
-      {apiKey?"AI ON":"AI OFF"}
-    </button>
-  );
-}
 
 /* ═══════════════════════════════════════════════════════════
    NAVBAR — standalone, always works, receives props directly
    This is the single source of truth for navigation.
    Every screen renders this. No closures. No prop drilling hell.
 ═══════════════════════════════════════════════════════════ */
-function NavBar({active, scanMode, navigate}) {
+function NavBar({active, navigate}) {
   // Ensure CSS always loaded when NavBar renders
   useEffect(() => {
     let el = document.getElementById("pid-css");
@@ -1643,11 +467,9 @@ function NavBar({active, scanMode, navigate}) {
 
   const tabs = [
     {id:"home",      short:"HOME"},
-    {id:"scan",      short:"SCAN"},
     {id:"connect",   short:"CONNECT"},
     {id:"fittings",  short:"FITTINGS"},
     {id:"reference", short:"REF"},
-    {id:"history",   short:"HISTORY"},
   ];
 
   return (
@@ -1655,57 +477,36 @@ function NavBar({active, scanMode, navigate}) {
       flexShrink:0,
       display:"flex",
       background:"var(--blk)",
-      borderTop:"3px solid var(--red)",
-      padding:"5px 6px calc(6px + env(safe-area-inset-bottom,0px)) 6px",
-      gap:5,
+      borderTop:"1px solid var(--bdr)",
+      padding:"0 0 env(safe-area-inset-bottom,0px)",
     }}>
       {tabs.map(t => {
         const isActive = t.id === active;
         return (
           <button key={t.id}
             onClick={() => navigate(t.id)}
-            aria-label={t.label}
+            aria-label={t.short}
             style={{
               flex:1,
               display:"flex",
               flexDirection:"column",
               alignItems:"center",
               justifyContent:"center",
-              gap:4,
-              padding:"9px 4px 8px",
-              borderRadius:"6px",
-              cursor:"pointer",
+              gap:3,
+              padding:"11px 4px 10px",
               fontFamily:"'Barlow Condensed',sans-serif",
-              background: isActive ? "var(--red)" : "var(--blk3)",
-              boxShadow: isActive
-                ? "inset 0 2px 5px rgba(0,0,0,.45), 0 0 0 1px rgba(232,25,44,.6)"
-                : "0 3px 0 rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 1px rgba(255,255,255,.09)",
-              transform:"translateY(0px)",
-              transition:"box-shadow .08s, transform .08s, background .12s",
+              background:"none",
               border:"none",
-            }}
-            onPointerDown={e => {
-              e.currentTarget.style.transform = "translateY(2px)";
-              e.currentTarget.style.boxShadow = isActive
-                ? "inset 0 3px 7px rgba(0,0,0,.55), 0 0 0 1px rgba(232,25,44,.6)"
-                : "0 1px 0 rgba(0,0,0,.5), inset 0 2px 4px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.08)";
-            }}
-            onPointerUp={e => {
-              e.currentTarget.style.transform = "translateY(0px)";
-              e.currentTarget.style.boxShadow = isActive
-                ? "inset 0 2px 5px rgba(0,0,0,.45), 0 0 0 1px rgba(232,25,44,.6)"
-                : "0 3px 0 rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 1px rgba(255,255,255,.09)";
-            }}
-            onPointerLeave={e => {
-              e.currentTarget.style.transform = "translateY(0px)";
-            }}
-          >
+              cursor:"pointer",
+              boxShadow: isActive ? "inset 0 2px 0 var(--cop)" : "none",
+              transition:"box-shadow .1s",
+            }}>
             <NavIcon id={t.id} active={isActive}/>
             <span style={{
-              fontSize:16,
-              fontWeight:900,
-              letterSpacing:".04em",
-              color: isActive ? "#fff" : "var(--w50)",
+              fontSize:15,
+              fontWeight:800,
+              letterSpacing:".06em",
+              color: isActive ? "var(--cop)" : "var(--w40)",
               whiteSpace:"nowrap",
               textTransform:"uppercase",
             }}>{t.short}</span>
@@ -1718,7 +519,7 @@ function NavBar({active, scanMode, navigate}) {
 
 /* ─── Nav icons ─────────────────────────────────────────────── */
 function NavIcon({id, active}) {
-  const col = active ? "var(--wht)" : "var(--w40)";
+  const col = active ? "var(--cop)" : "var(--w40)";
   const s = {
     stroke:col, fill:"none", strokeWidth:"2",
     strokeLinecap:"round", strokeLinejoin:"round",
@@ -1728,12 +529,6 @@ function NavIcon({id, active}) {
     <svg viewBox="0 0 24 24" {...s}>
       <path d="M3 9.5L12 3l9 6.5V21a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/>
       <path d="M9 22V12h6v10"/>
-    </svg>
-  );
-  if(id==="scan") return(
-    <svg viewBox="0 0 24 24" {...s}>
-      <path d="M4 4h4v4H4zM16 4h4v4h-4zM4 16h4v4H4z"/>
-      <path d="M16 16h4v4h-4zM12 4v4M4 12h4M12 20v-4M20 12h-4M12 12h.01"/>
     </svg>
   );
   if(id==="connect") return(
@@ -1766,7 +561,7 @@ function NavIcon({id, active}) {
   );
 }
 
-function ReferenceScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey, setShowKey, keyDraft, setKeyDraft}) {
+function ReferenceScreen({screen, navigate}) {
   const [unit,      setUnit]      = useState("in");
   const [circumVal, setCircumVal] = useState("");
   const [activeTab, setActiveTab] = useState("table");
@@ -1789,8 +584,7 @@ function ReferenceScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey
 
   return (
     <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
-      <KeyModal apiKey={apiKey} setApiKey={setApiKey} showKey={showKey} setShowKey={setShowKey} keyDraft={keyDraft} setKeyDraft={setKeyDraft}/>
-      <ScreenHeader title="Reference" right={<AIBadge apiKey={apiKey} setApiKey={setApiKey} setShowKey={setShowKey} setKeyDraft={setKeyDraft}/>}/>
+      <ScreenHeader title="Reference"/>
 
       <div style={{background:"var(--blk2)",borderBottom:"1px solid var(--bdr)",
         flexShrink:0,padding:"6px 10px",
@@ -1802,12 +596,9 @@ function ReferenceScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey
               fontFamily:"'Barlow Condensed',sans-serif",
               fontWeight:900,fontSize:16,letterSpacing:".04em",
               cursor:"pointer",
-              background:activeTab===t.id?"var(--red)":"var(--blk3)",
-              color:activeTab===t.id?"var(--wht)":"var(--w50)",
-              boxShadow:activeTab===t.id
-                ? "inset 0 2px 4px rgba(0,0,0,.4)"
-                : "0 3px 0 rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.07)",
-              border:"none",
+              background:activeTab===t.id?"var(--cop)":"var(--blk3)",
+              color:activeTab===t.id?"var(--blk)":"var(--w50)",
+              border:"1px solid " + (activeTab===t.id?"var(--cop)":"var(--bdr2)"),
               transition:"all .12s",
             }}>{t.label}</button>
           ))}
@@ -1896,7 +687,7 @@ function ReferenceScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey
                       <BC c="NOMINAL" s={{fontSize:14,fontWeight:700,color:"var(--w50)",
                         letterSpacing:".1em",display:"block",marginBottom:4}}/>
                       <BC c={best?.nominal||"—"}
-                        s={{fontSize:38,fontWeight:900,color:"var(--red)",lineHeight:1}}/>
+                        s={{fontSize:38,fontWeight:900,color:"var(--cop)",lineHeight:1}}/>
                     </div>
                   </div>
                 </div>
@@ -1957,7 +748,7 @@ function ReferenceScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey
                 border:"1px solid var(--bdr2)",overflow:"hidden"}}>
                 <div style={{display:"grid",gridTemplateColumns:"52px 1fr 72px 72px",
                   padding:"9px 12px",background:"var(--blk3)",
-                  borderBottom:"2px solid var(--red)"}}>
+                  borderBottom:"2px solid var(--cop)"}}>
                   {["Nom.","Material","C (in)","C (mm)"].map(h=>(
                     <BC key={h} c={h} s={{fontSize:14,fontWeight:800,
                       color:"var(--w50)",letterSpacing:".07em",textTransform:"uppercase"}}/>
@@ -2058,7 +849,7 @@ function ReferenceScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey
               border:"1px solid var(--bdr2)",overflow:"hidden"}}>
               <div style={{display:"grid",gridTemplateColumns:"52px 1fr 72px 64px",
                 padding:"9px 14px",background:"var(--blk3)",
-                borderBottom:"2px solid var(--red)"}}>
+                borderBottom:"2px solid var(--cop)"}}>
                 {[["Nom.",""],["Material",""],['OD (in)"',"var(--grn)"],["mm","var(--w50)"]].map(([h,c])=>(
                   <BC key={h} c={h} s={{fontSize:13,fontWeight:800,
                     color:c||"var(--w50)",letterSpacing:".08em",textTransform:"uppercase"}}/>
@@ -2087,7 +878,7 @@ function ReferenceScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey
         )}
       </div>
 
-      <NavBar active="reference" scanMode={scanMode} navigate={navigate}/>
+      <NavBar active="reference" navigate={navigate}/>
     </div>
   );
 }
@@ -3536,7 +2327,7 @@ const BRAND_COLORS = {
 /* ═══════════════════════════════════════════════════════════
    FITTINGS SCREEN
 ═══════════════════════════════════════════════════════════ */
-function FittingsScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey, setShowKey, keyDraft, setKeyDraft}) {
+function FittingsScreen({screen, navigate}) {
   const [material,   setMaterial]   = useState("Copper");
   const [size,       setSize]       = useState('¾"');  // run A (main run)
   const [sizeB,      setSizeB]      = useState("");    // run B (second run for tees) or outlet
@@ -3574,8 +2365,7 @@ function FittingsScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey,
 
   return (
     <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
-      <KeyModal apiKey={apiKey} setApiKey={setApiKey} showKey={showKey} setShowKey={setShowKey} keyDraft={keyDraft} setKeyDraft={setKeyDraft}/>
-      <ScreenHeader title="Fittings" right={<AIBadge apiKey={apiKey} setApiKey={setApiKey} setShowKey={setShowKey} setKeyDraft={setKeyDraft}/>}/>
+      <ScreenHeader title="Fittings"/>
 
       {/* Selectors */}
       <div style={{padding:"10px 14px 0",background:"var(--blk2)",
@@ -3591,9 +2381,9 @@ function FittingsScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey,
               padding:"7px 11px",borderRadius:4,fontSize:14,cursor:"pointer",
               fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
               letterSpacing:".04em",
-              background:material===mat?"var(--red)":"var(--blk3)",
-              color:material===mat?"var(--wht)":"var(--w50)",
-              border:"1px solid " + (material===mat?"var(--red)":"var(--bdr2)"),
+              background:material===mat?"var(--cop)":"var(--blk3)",
+              color:material===mat?"var(--blk)":"var(--w50)",
+              border:"1px solid " + (material===mat?"var(--cop)":"var(--bdr2)"),
               transition:"all .12s",
               minHeight:"unset",
             }}>{mat}</button>
@@ -3673,9 +2463,9 @@ function FittingsScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey,
           <button key={ft.id} onClick={()=>setTypeFilter(ft.id)} style={{
             padding:"7px 12px",borderRadius:20,fontSize:14,cursor:"pointer",whiteSpace:"nowrap",
             fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,letterSpacing:".06em",minHeight:"unset",
-            background:typeFilter===ft.id?"var(--red)":"var(--blk3)",
-            color:typeFilter===ft.id?"var(--wht)":"var(--w50)",
-            border:"1px solid " + (typeFilter===ft.id?"var(--red)":"var(--bdr2)"),
+            background:typeFilter===ft.id?"var(--cop)":"var(--blk3)",
+            color:typeFilter===ft.id?"var(--blk)":"var(--w50)",
+            border:"1px solid " + (typeFilter===ft.id?"var(--cop)":"var(--bdr2)"),
           }}>{ft.label}</button>
         ))}
       </div>
@@ -3686,12 +2476,12 @@ function FittingsScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey,
         {/* Sponsor banner — shown when sponsored retailers are active */}
         {sponsoredRetailers.length > 0 && (
           <div style={{padding:"8px 12px",borderRadius:"var(--r)",
-            background:"rgba(232,25,44,.08)",border:"1px solid rgba(232,25,44,.25)",
+            background:"rgba(201,121,60,.08)",border:"1px solid rgba(201,121,60,.25)",
             marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
-            <BC c="★" s={{fontSize:17,color:"var(--red)"}}/>
+            <BC c="★" s={{fontSize:17,color:"var(--cop)"}}/>
             <div style={{fontSize:15,color:"var(--w80)"}}>
               <BC c={sponsoredRetailers.map(r=>r.name).join(" · ")}
-                s={{fontWeight:800,color:"var(--red)"}}/>{" "}
+                s={{fontWeight:800,color:"var(--cop)"}}/>{" "}
               stocking these fittings locally.
             </div>
           </div>
@@ -3726,7 +2516,7 @@ function FittingsScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey,
         </div>
       </div>
 
-      <NavBar active="fittings" scanMode={scanMode} navigate={navigate}/>
+      <NavBar active="fittings" navigate={navigate}/>
     </div>
   );
 }
@@ -3760,7 +2550,7 @@ function FittingCard({fitting, retailers, sponsored}) {
             </span>
             {isSponsored&&(
               <span style={{fontSize:14,padding:"2px 6px",borderRadius:2,
-                background:"rgba(232,25,44,.15)",color:"var(--red)",
+                background:"rgba(201,121,60,.15)",color:"var(--cop)",
                 fontFamily:"'Barlow Condensed',sans-serif",
                 fontWeight:800,letterSpacing:".06em"}}>★ LOCAL STOCK</span>
             )}
@@ -3786,8 +2576,8 @@ function FittingCard({fitting, retailers, sponsored}) {
                 style={{
                   display:"flex",alignItems:"center",justifyContent:"space-between",
                   padding:"10px 14px",borderRadius:"var(--r)",
-                  background:r.sponsored?"rgba(232,25,44,.1)":"var(--blk3)",
-                  border:`1px solid ${r.sponsored?"rgba(232,25,44,.35)":"var(--bdr2)"}`,
+                  background:r.sponsored?"rgba(201,121,60,.1)":"var(--blk3)",
+                  border:`1px solid ${r.sponsored?"rgba(201,121,60,.35)":"var(--bdr2)"}`,
                   textDecoration:"none",
                   transition:"background .12s",
                 }}>
@@ -3795,15 +2585,15 @@ function FittingCard({fitting, retailers, sponsored}) {
                   <div style={{width:8,height:8,borderRadius:"50%",
                     background:r.color,flexShrink:0}}/>
                   <BC c={r.name} s={{fontSize:18,fontWeight:800,
-                    color:r.sponsored?"var(--red)":"var(--w80)"}}/>
+                    color:r.sponsored?"var(--cop)":"var(--w80)"}}/>
                   {r.sponsored&&(
                     <BC c="★ SPONSOR" s={{fontSize:14,padding:"1px 6px",
-                      borderRadius:2,background:"rgba(232,25,44,.2)",
-                      color:"var(--red)",fontWeight:900,letterSpacing:".08em"}}/>
+                      borderRadius:2,background:"rgba(201,121,60,.2)",
+                      color:"var(--cop)",fontWeight:900,letterSpacing:".08em"}}/>
                   )}
                 </div>
                 <BC c="Search →" s={{fontSize:15,fontWeight:700,
-                  color:r.sponsored?"var(--red)":"var(--w50)"}}/>
+                  color:r.sponsored?"var(--cop)":"var(--w50)"}}/>
               </a>
             ))}
           </div>
@@ -3821,552 +2611,6 @@ function FittingCard({fitting, retailers, sponsored}) {
 /* ═══════════════════════════════════════════════════════════
    HISTORY SCREEN — with job notes, scan selector, PDF export
 ═══════════════════════════════════════════════════════════ */
-function HistoryScreen({history, setHistory, screen, scanMode, navigate, apiKey, setApiKey, showKey, setShowKey, keyDraft, setKeyDraft}) {
-  const [view,       setView]      = useState("list");   // "list"|"report"
-  const [selected,   setSelected]  = useState(new Set());
-  const [noteOpen,   setNoteOpen]  = useState(null);     // scan id
-  const [noteDraft,  setNoteDraft] = useState("");
-  const [generating, setGenerating]= useState(false);
-
-  // Job info state
-  const [job, setJob] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("pid_job")||"{}"); } catch { return {}; }
-  });
-
-  const saveJob = (updates) => {
-    const next = {...job, ...updates};
-    setJob(next);
-    localStorage.setItem("pid_job", JSON.stringify(next));
-  };
-
-  // Note editing
-  const openNote = (h) => {
-    setNoteOpen(h.id);
-    setNoteDraft(h.note || "");
-  };
-  const saveNote = () => {
-    const updated = history.map(h =>
-      h.id === noteOpen ? {...h, note: noteDraft} : h
-    );
-    localStorage.setItem("pid_h", JSON.stringify(updated));
-    setHistory(updated);
-    setNoteOpen(null);
-  };
-
-  const deleteScan = (id) => {
-    const updated = history.filter(h => h.id !== id);
-    localStorage.setItem("pid_h", JSON.stringify(updated));
-    setHistory(updated);
-    setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
-  };
-
-  // Selection
-  const toggleSelect = (id) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-  const selectAll   = () => setSelected(new Set(history.map(h => h.id)));
-  const selectNone  = () => setSelected(new Set());
-
-  // Generate PDF using jsPDF (loaded from CDN in index.html)
-  const generatePDF = async () => {
-    const scans = history.filter(h => selected.has(h.id));
-    if (!scans.length) return;
-    setGenerating(true);
-
-    try {
-      // Dynamically load jsPDF from CDN
-      if (!window.jspdf) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"letter" });
-
-      const W  = 215.9;   // letter width mm
-      const H  = 279.4;   // letter height mm
-      const ml = 15;      // margin left
-      const mr = 15;      // margin right
-      const cw = W - ml - mr; // content width
-      let y    = 0;
-
-      const newPage = () => { doc.addPage(); y = 20; };
-      const checkPage = (needed) => { if (y + needed > H - 20) newPage(); };
-
-      // ── HEADER ──────────────────────────────────────────────
-      // Red bar at top
-      doc.setFillColor(204, 32, 32);
-      doc.rect(0, 0, W, 14, "F");
-
-      // Logo text
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.setTextColor(255, 255, 255);
-      doc.text("POCKET PLUMBER", ml, 9.5);
-      doc.setFillColor(240, 235, 224);
-      doc.rect(ml + 18, 2, 14, 10, "F");
-      doc.setTextColor(12, 12, 12);
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(255, 255, 255);
-      doc.text("FIELD INSPECTION REPORT", ml + 90, 9);
-
-      // Date top right
-      doc.setFontSize(8);
-      doc.setTextColor(255, 255, 255);
-      doc.text(new Date().toLocaleDateString("en-US",{
-        month:"long", day:"numeric", year:"numeric"
-      }), W - mr, 9, { align:"right" });
-
-      y = 22;
-
-      // ── JOB INFO BLOCK ───────────────────────────────────────
-      doc.setFillColor(20, 20, 20);
-      doc.rect(ml, y, cw, 42, "F");
-      doc.setDrawColor(40, 40, 40);
-      doc.rect(ml, y, cw, 42);
-
-      // Left column
-      const col1 = ml + 4;
-      const col2 = ml + cw / 2 + 4;
-      let iy = y + 8;
-
-      const jobField = (label, val, x, row) => {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
-        doc.setTextColor(120, 120, 120);
-        doc.text(label.toUpperCase(), x, row);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(240, 235, 224);
-        doc.text(val || "—", x, row + 5.5);
-      };
-
-      jobField("Job Name",     job.name    || "Untitled Job",  col1, iy);
-      jobField("Client",       job.client  || "",              col2, iy);
-      iy += 14;
-      jobField("Address",      job.address || "",              col1, iy);
-      jobField("Inspector",    job.inspector || "",            col2, iy);
-      iy += 14;
-      if (job.notes) {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
-        doc.setTextColor(120, 120, 120);
-        doc.text("NOTES", col1, iy);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(200, 195, 184);
-        const wrapped = doc.splitTextToSize(job.notes, cw - 8);
-        doc.text(wrapped[0], col1, iy + 5.5);
-      }
-
-      y += 50;
-
-      // ── SUMMARY LINE ────────────────────────────────────────
-      doc.setFillColor(232, 25, 44);
-      doc.rect(ml, y, cw, 7, "F");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(255, 255, 255);
-      doc.text(`${scans.length} PIPE${scans.length!==1?"S":""} IDENTIFIED  ·  ${
-        scans.filter(s=>lookupDanger(s.material)).length} FLAGGED  ·  ${
-        new Date().toLocaleDateString()}`, ml + 3, y + 4.8);
-      y += 13;
-
-      // ── SCAN ENTRIES ────────────────────────────────────────
-      for (let i = 0; i < scans.length; i++) {
-        const s    = scans[i];
-        const dng  = lookupDanger(s.material);
-        const lvl  = dng ? DANGER_LEVEL[dng.level] : null;
-        const cardH = s.thumb ? 52 : 36;
-
-        checkPage(cardH + 6);
-
-        // Card background
-        const cardY = y;
-        doc.setFillColor(20, 20, 20);
-        doc.rect(ml, cardY, cw, cardH, "F");
-
-        // Left accent bar — danger color or green
-        if (dng) {
-          const [r,g,b] = lvl.color.replace("#","").match(/.{2}/g).map(x=>parseInt(x,16));
-          doc.setFillColor(r,g,b);
-        } else {
-          doc.setFillColor(34, 197, 94);
-        }
-        doc.rect(ml, cardY, 3, cardH, "F");
-
-        // Scan number
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(120,120,120);
-        doc.text(`#${String(i+1).padStart(2,"0")}`, ml+6, cardY+6);
-
-        // Thumbnail
-        let textX = ml + 6;
-        if (s.thumb) {
-          try {
-            doc.addImage(s.thumb, "JPEG", ml + 6, cardY + 9, 30, 30, "", "FAST");
-            textX = ml + 40;
-          } catch(e) { textX = ml + 6; }
-        }
-
-        // Material + grade
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.setTextColor(240, 235, 224);
-        doc.text(s.material || "Unknown", textX, cardY + 15);
-
-        if (s.grade) {
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(9);
-          doc.setTextColor(150, 145, 135);
-          doc.text(s.grade, textX, cardY + 21);
-        }
-
-        // OD measurements
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(34, 197, 94);
-        doc.text(s.od_mm ? `${s.od_mm}mm` : "—", textX, cardY + 29);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(150,145,135);
-        doc.text(s.od_in ? `${s.od_in}"` : "", textX + 18, cardY + 29);
-
-        // Nominal size — large, right side
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(22);
-        doc.setTextColor(204, 32, 32);
-        doc.text(s.nominal || "—", W - mr - 4, cardY + 20, { align:"right" });
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7);
-        doc.setTextColor(100,100,100);
-        doc.text("NOMINAL", W - mr - 4, cardY + 25, { align:"right" });
-
-        // Date + mode
-        doc.setFontSize(7);
-        doc.setTextColor(100,100,100);
-        doc.text(
-          `${new Date(s.ts).toLocaleDateString()}  ·  ${s.mode==="xsection"?"End View":"Top-Down"}`,
-          textX, cardY + 35
-        );
-
-        // Danger flag
-        if (dng) {
-          const [r,g,b] = lvl.color.replace("#","").match(/.{2}/g).map(x=>parseInt(x,16));
-          doc.setFillColor(r,g,b,0.2);
-          doc.setDrawColor(r,g,b);
-          doc.roundedRect(textX, cardY+38, 55, 7, 1, 1, "FD");
-          doc.setFont("helvetica","bold");
-          doc.setFontSize(7);
-          doc.setTextColor(r,g,b);
-          doc.text(`${lvl.icon} ${lvl.label}`, textX+3, cardY+43.5);
-        }
-
-        // Scan note
-        if (s.note) {
-          const noteY = dng ? cardY + 47 : cardY + 40;
-          checkPage(noteY - y + 12);
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(8);
-          doc.setTextColor(150,145,135);
-          const noteLines = doc.splitTextToSize(`Note: ${s.note}`, cw - 50);
-          doc.text(noteLines[0], textX, noteY);
-        }
-
-        y = cardY + cardH + 5;
-      }
-
-      // ── FOOTER on each page ──────────────────────────────────
-      const totalPages = doc.internal.getNumberOfPages();
-      for (let p = 1; p <= totalPages; p++) {
-        doc.setPage(p);
-        doc.setFillColor(12,12,12);
-        doc.rect(0, H-10, W, 10, "F");
-        doc.setFont("helvetica","normal");
-        doc.setFontSize(7);
-        doc.setTextColor(80,80,80);
-        doc.text("Generated by Pocket Plumber · The Plumber's Field Companion", ml, H-4);
-        doc.text(`Page ${p} of ${totalPages}`, W-mr, H-4, {align:"right"});
-      }
-
-      // Save
-      const filename = `PocketPlumber_Report_${(job.name||"Job").replace(/\s+/g,"_")}_${
-        new Date().toISOString().slice(0,10)}.pdf`;
-      doc.save(filename);
-
-    } catch(e) {
-      alert("PDF generation failed: " + e.message);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // ── RENDER ────────────────────────────────────────────────
-  return (
-    <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
-      {/* Note edit modal */}
-      {noteOpen&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",
-          display:"flex",alignItems:"flex-end",zIndex:200}}
-          onClick={e=>{if(e.target===e.currentTarget)setNoteOpen(null);}}>
-          <div style={{background:"var(--blk2)",borderTop:"3px solid var(--grn)",
-            borderRadius:"4px 4px 0 0",padding:"20px 20px 36px",width:"100%"}}>
-            <div style={{width:36,height:4,borderRadius:4,background:"var(--bdr2)",
-              margin:"0 auto 16px"}}/>
-            <BC c="Add note to this scan" s={{fontSize:19,fontWeight:900,
-              display:"block",marginBottom:12}}/>
-            <textarea
-              value={noteDraft}
-              onChange={e=>setNoteDraft(e.target.value)}
-              placeholder="e.g. Master bath supply line, behind wall at east corner..."
-              rows={4}
-              style={{width:"100%",padding:"11px 12px",borderRadius:"var(--r)",
-                background:"var(--blk3)",border:"1px solid var(--bdr2)",
-                color:"var(--wht)",fontSize:16,outline:"none",resize:"none",
-                fontFamily:"'Barlow',sans-serif",lineHeight:1.5,marginBottom:12}}
-              autoFocus/>
-            <div style={{display:"flex",gap:10}}>
-              <button className="btn-ghost" style={{flex:1}}
-                onClick={()=>setNoteOpen(null)}>Cancel</button>
-              <button className="btn-fire" style={{flex:2,padding:"13px 0",fontSize:20}}
-                onClick={saveNote}>Save Note</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div style={{flexShrink:0}}>
-        <div className="redtop"/>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-          padding:"36px 16px 10px",background:"var(--blk2)",
-          borderBottom:"1px solid var(--bdr)"}}>
-          <BC c="History" s={{fontSize:26,fontWeight:900,fontStyle:"italic"}}/>
-          <div style={{display:"flex",gap:8}}>
-            {history.length>0&&(
-              <>
-                <button onClick={()=>setView(v=>v==="list"?"report":"list")}
-                  style={{padding:"6px 12px",borderRadius:"var(--r)",
-                    background:view==="report"?"var(--grn)":"var(--blk3)",
-                    border:`1px solid ${view==="report"?"var(--grn)":"var(--bdr2)"}`,
-                    color:view==="report"?"#0c0c0c":"var(--w80)",
-                    fontFamily:"'Barlow Condensed',sans-serif",
-                    fontWeight:800,fontSize:15,letterSpacing:".06em",cursor:"pointer"}}>
-                  {view==="report"?"✕ CANCEL":"📋 EXPORT"}
-                </button>
-                <button onClick={()=>{if(window.confirm("Clear all history?")){
-                  localStorage.removeItem("pid_h");
-                  setHistory([]);setSelected(new Set());}}}
-                  style={{fontSize:15,color:"rgba(204,32,32,.7)",
-                    fontFamily:"'Barlow Condensed',sans-serif",
-                    fontWeight:700,letterSpacing:".06em"}}>
-                  CLEAR
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Report builder panel */}
-      {view==="report"&&(
-        <div style={{background:"var(--blk2)",borderBottom:"2px solid var(--grn)",
-          padding:"14px 16px",flexShrink:0}}>
-
-          <BC c="Job Details" s={{fontSize:15,fontWeight:800,color:"var(--w50)",
-            letterSpacing:".1em",textTransform:"uppercase",
-            display:"block",marginBottom:10}}/>
-
-          {/* Job fields — 2 column grid */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-            {[
-              {key:"name",     placeholder:"Job name / description"},
-              {key:"client",   placeholder:"Client name"},
-              {key:"address",  placeholder:"Site address"},
-              {key:"inspector",placeholder:"Inspector / plumber name"},
-            ].map(f=>(
-              <input key={f.key}
-                value={job[f.key]||""}
-                onChange={e=>saveJob({[f.key]:e.target.value})}
-                placeholder={f.placeholder}
-                style={{padding:"9px 10px",borderRadius:"var(--r)",
-                  background:"var(--blk3)",border:"1px solid var(--bdr2)",
-                  color:"var(--wht)",fontSize:15,outline:"none",
-                  fontFamily:"'Barlow',sans-serif"}}/>
-            ))}
-          </div>
-          <textarea
-            value={job.notes||""}
-            onChange={e=>saveJob({notes:e.target.value})}
-            placeholder="General notes / observations..."
-            rows={2}
-            style={{width:"100%",padding:"9px 10px",borderRadius:"var(--r)",
-              background:"var(--blk3)",border:"1px solid var(--bdr2)",
-              color:"var(--wht)",fontSize:15,outline:"none",resize:"none",
-              fontFamily:"'Barlow',sans-serif",lineHeight:1.5,marginBottom:10}}/>
-
-          {/* Select controls */}
-          <div style={{display:"flex",alignItems:"center",
-            justifyContent:"space-between",marginBottom:8}}>
-            <BC c={`${selected.size} of ${history.length} scans selected`}
-              s={{fontSize:15,fontWeight:700,color:"var(--w50)"}}/>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={selectAll}
-                style={{fontSize:15,color:"var(--grn)",fontFamily:"'Barlow Condensed',sans-serif",
-                  fontWeight:800,letterSpacing:".04em"}}>SELECT ALL</button>
-              <button onClick={selectNone}
-                style={{fontSize:15,color:"var(--w50)",fontFamily:"'Barlow Condensed',sans-serif",
-                  fontWeight:800,letterSpacing:".04em"}}>CLEAR</button>
-            </div>
-          </div>
-
-          {/* Export button */}
-          <button className="btn-fire"
-            onClick={generatePDF}
-            aria-label="Export PDF report"
-            disabled={selected.size===0||generating}
-            style={{fontSize:20}}>
-            {generating
-              ? <><Spinner/>Generating PDF…</>
-              : `Export PDF — ${selected.size} scan${selected.size!==1?"s":""}`
-            }
-          </button>
-        </div>
-      )}
-
-      {/* Scan list */}
-      <div className="scroll" style={{flex:1,minHeight:0}}>
-        {history.length===0&&(
-          <div style={{padding:56,textAlign:"center"}}>
-            <BC c="📏" s={{fontSize:40,display:"block",marginBottom:14}}/>
-            <BC c="No Scans Yet" s={{fontSize:24,fontWeight:900,fontStyle:"italic",
-              display:"block",marginBottom:6}}/>
-            <div style={{fontSize:16,color:"var(--w50)"}}>
-              Your pipe measurements will appear here
-            </div>
-          </div>
-        )}
-
-        {history.map(h=>{
-          const dng  = lookupDanger(h.material);
-          const lvl  = dng ? DANGER_LEVEL[dng.level] : null;
-          const isSel = selected.has(h.id);
-
-          return (
-            <div key={h.id} style={{
-              borderBottom:"1px solid var(--bdr)",
-              background:isSel?"rgba(34,197,94,.05)":"transparent",
-              transition:"background .15s",
-            }}>
-              <div style={{display:"flex",alignItems:"center",gap:12,
-                padding:"12px 16px"}}>
-
-                {/* Checkbox (report mode) */}
-                {view==="report"&&(
-                  <button onClick={()=>toggleSelect(h.id)} style={{
-                    width:24,height:24,borderRadius:4,flexShrink:0,cursor:"pointer",
-                    background:isSel?"var(--grn)":"var(--blk3)",
-                    border:`2px solid ${isSel?"var(--grn)":"var(--bdr2)"}`,
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                    transition:"all .15s",
-                  }}>
-                    {isSel&&<BC c="✓" s={{fontSize:16,fontWeight:900,color:"#0c0c0c"}}/>}
-                  </button>
-                )}
-
-                {/* Thumb */}
-                <div style={{width:52,height:52,borderRadius:"var(--r)",overflow:"hidden",
-                  border:"1px solid var(--bdr2)",flexShrink:0,background:"var(--blk3)"}}>
-                  {h.thumb&&<img src={h.thumb} alt=""
-                    style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
-                </div>
-
-                {/* Info */}
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",alignItems:"center",
-                    gap:6,marginBottom:2,flexWrap:"wrap"}}>
-                    <BC c={h.material||"Unknown"} s={{fontSize:18,fontWeight:800,
-                      whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}/>
-                    {h.mode==="xsection"&&(
-                      <BC c="END" s={{fontSize:14,padding:"1px 5px",borderRadius:2,
-                        background:"rgba(245,197,24,.15)",color:"var(--yel)",fontWeight:800}}/>
-                    )}
-                    {dng&&(
-                      <BC c={`${lvl.icon} ${lvl.label}`}
-                        s={{fontSize:14,padding:"2px 6px",borderRadius:2,fontWeight:900,
-                          letterSpacing:".06em",background:lvl.bg,
-                          color:lvl.color,border:`1px solid ${lvl.border}`}}/>
-                    )}
-                  </div>
-                  <Mono c={`${h.nominal} · ${h.od_mm||"?"}mm / ${h.od_in||"?"}"`}
-                    s={{fontSize:15,color:"var(--w50)"}}/>
-                  {h.note&&(
-                    <div style={{fontSize:15,color:"var(--w50)",marginTop:3,
-                      fontStyle:"italic",lineHeight:1.4,
-                      whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
-                      {h.note}
-                    </div>
-                  )}
-                </div>
-
-                {/* Right side */}
-                <div style={{textAlign:"right",flexShrink:0,
-                  display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-                  <BC c={h.nominal} s={{fontSize:26,fontWeight:900,
-                    color:"var(--red)",lineHeight:1}}/>
-                  <Mono c={new Date(h.ts).toLocaleDateString()}
-                    s={{fontSize:14,color:"var(--w50)"}}/>
-                  {/* Note button */}
-                  <button onClick={()=>openNote(h)} style={{
-                    fontSize:14,padding:"3px 8px",borderRadius:2,cursor:"pointer",
-                    fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
-                    letterSpacing:".06em",
-                    background:h.note?"rgba(34,197,94,.12)":"var(--blk3)",
-                    border:"1px solid " + (h.note?"rgba(34,197,94,.3)":"var(--bdr2)"),
-                    color:h.note?"var(--grn)":"var(--w50)",
-                    minHeight:"unset",
-                  }}>
-                    {h.note?"EDIT NOTE":"+ NOTE"}
-                  </button>
-                  <button onClick={()=>deleteScan(h.id)} style={{
-                    fontSize:14,padding:"3px 8px",borderRadius:2,cursor:"pointer",
-                    fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
-                    letterSpacing:".06em",
-                    background:"transparent",
-                    border:"1px solid rgba(204,32,32,.25)",
-                    color:"rgba(204,32,32,.5)",
-                    minHeight:"unset",
-                  }} aria-label="Delete scan">✕</button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <NavBar active="history" scanMode={scanMode} navigate={navigate}/>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   COMPATIBILITY DATABASE
-   Every material-to-material connection scenario.
-   Keys are always sorted alphabetically so lookup is symmetric.
-═══════════════════════════════════════════════════════════ */
-
 const COMPAT_MATERIALS = [
   "Copper",
   "CPVC",
@@ -5281,7 +3525,7 @@ function getCompat(matA, matB) {
 /* ═══════════════════════════════════════════════════════════
    COMPAT SCREEN
 ═══════════════════════════════════════════════════════════ */
-function CompatScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey, setShowKey, keyDraft, setKeyDraft}) {
+function CompatScreen({screen, navigate}) {
   const [matA, setMatA] = useState("Copper");
   const [matB, setMatB] = useState("PEX");
   const [sizeA, setSizeA] = useState('¾"');
@@ -5293,8 +3537,7 @@ function CompatScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey, s
 
   return (
     <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
-      <KeyModal apiKey={apiKey} setApiKey={setApiKey} showKey={showKey} setShowKey={setShowKey} keyDraft={keyDraft} setKeyDraft={setKeyDraft}/>
-      <ScreenHeader title="Connect" right={<AIBadge apiKey={apiKey} setApiKey={setApiKey} setShowKey={setShowKey} setKeyDraft={setKeyDraft}/>}/>
+      <ScreenHeader title="Connect"/>
 
       <div className="scroll" style={{flex:1,minHeight:0,padding:"16px 16px 28px"}}>
 
@@ -5316,7 +3559,7 @@ function CompatScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey, s
           {/* Pipe A */}
           <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
             border:"1px solid var(--bdr2)",padding:"12px 12px 10px"}}>
-            <BC c="Pipe A" s={{fontSize:14,fontWeight:800,color:"var(--grn)",
+            <BC c="Pipe A" s={{fontSize:14,fontWeight:800,color:"var(--w50)",
               letterSpacing:".1em",display:"block",marginBottom:8}}/>
             <select value={matA} onChange={e=>setMatA(e.target.value)}
               style={{width:"100%",padding:"9px 8px",borderRadius:"var(--r)",
@@ -5347,7 +3590,7 @@ function CompatScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey, s
           {/* Pipe B */}
           <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
             border:"1px solid var(--bdr2)",padding:"12px 12px 10px"}}>
-            <BC c="Pipe B" s={{fontSize:14,fontWeight:800,color:"var(--red)",
+            <BC c="Pipe B" s={{fontSize:14,fontWeight:800,color:"var(--w50)",
               letterSpacing:".1em",display:"block",marginBottom:8}}/>
             <select value={matB} onChange={e=>setMatB(e.target.value)}
               style={{width:"100%",padding:"9px 8px",borderRadius:"var(--r)",
@@ -5490,14 +3733,14 @@ function CompatScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey, s
                             href={r.url(f.search)}
                             target="_blank" rel="noopener noreferrer"
                             style={{padding:"5px 10px",borderRadius:2,
-                              background:r.sponsored?"rgba(232,25,44,.1)":"var(--blk4)",
-                              border:`1px solid ${r.sponsored?"rgba(232,25,44,.3)":"var(--bdr)"}`,
+                              background:r.sponsored?"rgba(201,121,60,.1)":"var(--blk4)",
+                              border:`1px solid ${r.sponsored?"rgba(201,121,60,.3)":"var(--bdr)"}`,
                               textDecoration:"none",
                               display:"flex",alignItems:"center",gap:5}}>
                             <div style={{width:6,height:6,borderRadius:"50%",
                               background:r.color,flexShrink:0}}/>
                             <BC c={r.short} s={{fontSize:14,fontWeight:800,
-                              color:r.sponsored?"var(--red)":"var(--w50)",
+                              color:r.sponsored?"var(--cop)":"var(--w50)",
                               letterSpacing:".04em"}}/>
                           </a>
                         ))}
@@ -5563,7 +3806,7 @@ function CompatScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey, s
         )}
       </div>
 
-      <NavBar active="connect" scanMode={scanMode} navigate={navigate}/>
+      <NavBar active="connect" navigate={navigate}/>
     </div>
   );
 }
@@ -5573,7 +3816,7 @@ function CompatScreen({screen, scanMode, navigate, apiKey, setApiKey, showKey, s
    Bold. Industrial. Direct. No fluff.
 ═══════════════════════════════════════════════════════════ */
 /* ─── HomeTile — tactile 3D press button ────────────────────── */
-function HomeTile({tile, navigate, scan=false}) {
+function HomeTile({tile, navigate}) {
   const [pressed, setPressed] = useState(false);
   return (
     <button
@@ -5586,85 +3829,37 @@ function HomeTile({tile, navigate, scan=false}) {
         display:"flex",
         flexDirection:"column",
         alignItems:"flex-start",
-        gap: scan ? 8 : 6,
-        padding: scan ? "14px 14px 12px" : "12px 12px 10px",
-        borderRadius:"8px",
+        gap:10,
+        padding:"16px 14px 14px",
+        borderRadius:"var(--rm)",
         cursor:"pointer",
         textAlign:"left",
         width:"100%",
-        position:"relative",
-        overflow:"hidden",
-        background: pressed
-          ? `linear-gradient(180deg, ${tile.color}18 0%, ${tile.color}08 100%)`
-          : `linear-gradient(180deg, var(--blk3) 0%, var(--blk2) 100%)`,
-        boxShadow: pressed
-          ? `inset 0 3px 8px rgba(0,0,0,.5), 0 0 0 2px ${tile.color}44`
-          : `0 4px 0 rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 1px ${tile.color}22`,
-        transform: pressed ? "translateY(3px)" : "translateY(0)",
-        transition:"transform .08s, box-shadow .08s, background .08s",
-        border:"none",
+        background: pressed ? "var(--blk3)" : "var(--blk2)",
+        border:`1px solid ${pressed ? "var(--cop)" : "var(--bdr)"}`,
+        transition:"background .1s, border-color .1s",
         minHeight:"unset",
       }}>
-      {/* Top accent bar */}
-      <div style={{position:"absolute",top:0,left:0,right:0,height:3,
-        background:tile.color,
-        borderRadius:"8px 8px 0 0"}}/>
-      {/* Diagonal texture */}
-      <div style={{position:"absolute",inset:0,pointerEvents:"none",
-        background:`repeating-linear-gradient(-45deg,${tile.color}06 0,${tile.color}06 1px,transparent 1px,transparent 14px)`}}/>
-      {/* Icon */}
-      <div style={{color:tile.color,position:"relative",
-        filter:`drop-shadow(0 0 4px ${tile.color}44)`}}>{tile.icon}</div>
-      {/* Text */}
-      <div style={{position:"relative",width:"100%"}}>
+      <div style={{color:"var(--w80)"}}>{tile.icon}</div>
+      <div style={{width:"100%"}}>
         <BC c={tile.label} s={{
-          fontSize: scan ? 15 : 14,
-          fontWeight:900,
+          fontSize:15,
+          fontWeight:800,
           color:"var(--wht)",
           display:"block",
           marginBottom:2,
-          letterSpacing:".04em",
+          letterSpacing:".05em",
         }}/>
-        <div style={{fontSize:12,color:"var(--w50)",lineHeight:1.3}}>{tile.sub}</div>
+        <div style={{fontSize:12,color:"var(--w50)",lineHeight:1.35}}>{tile.sub}</div>
       </div>
     </button>
   );
 }
 
 
-function HomeScreen({navigate, screen, scanMode, apiKey, setApiKey, showKey, setShowKey, keyDraft, setKeyDraft}) {
+function HomeScreen({navigate, screen}) {
 
   const TILES = [
-    {
-      id:"scan",
-      label:"TOP-DOWN SCAN",
-      sub:"Camera points down at pipe",
-      icon:(
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 4h4v4H4zM16 4h4v4h-4zM4 16h4v4H4z"/>
-          <path d="M16 16h4v4h-4zM12 4v4M4 12h4M12 20v-4M20 12h-4M12 12h.01"/>
-        </svg>
-      ),
-      color:"#22c55e",
-      accent:"rgba(34,197,94,.15)",
-    },
-    {
-      id:"xsection",
-      label:"END VIEW SCAN",
-      sub:"Point at cut pipe end",
-      icon:(
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="9"/>
-          <circle cx="12" cy="12" r="5"/>
-          <line x1="12" y1="3" x2="12" y2="7"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-        </svg>
-      ),
-      color:"#22c55e",
-      accent:"rgba(34,197,94,.15)",
-    },
     {
       id:"connect",
       label:"COMPATIBILITY",
@@ -5713,100 +3908,28 @@ function HomeScreen({navigate, screen, scanMode, apiKey, setApiKey, showKey, set
       color:"#a78bfa",
       accent:"rgba(167,139,250,.15)",
     },
-    {
-      id:"history",
-      label:"HISTORY",
-      sub:"Scans · notes · PDF export",
-      icon:(
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
-        </svg>
-      ),
-      color:"#f97316",
-      accent:"rgba(249,115,22,.15)",
-    },
   ];
 
   return (
     <div style={{height:"100dvh",display:"flex",flexDirection:"column",
       background:"var(--blk)",overflow:"hidden"}}>
 
-      {/* ── HEADER — Christy's label inspired ── */}
+      {/* ── HEADER — spec plate ── */}
       <div style={{flexShrink:0,background:"var(--blk)"}}>
-
-        {/* Top red bar — thick like the can lid stripe */}
-        <div style={{height:4,background:"var(--red)"}}/>
-
-        {/* Main header block */}
-        <div style={{
-          padding:"12px 16px 0",
-          background:"var(--blk)",
-          position:"relative",
-          overflow:"hidden",
-        }}>
-          {/* Background diagonal texture — Christy's style */}
-          <div style={{
-            position:"absolute",inset:0,
-            background:"repeating-linear-gradient(-55deg, rgba(255,255,255,.013) 0px, rgba(255,255,255,.013) 1px, transparent 1px, transparent 18px)",
-            pointerEvents:"none",
-          }}/>
-
-          {/* POCKET PLUMBER — pipe-P SVG logo */}
-          <div style={{display:"flex",justifyContent:"center",marginBottom:10,position:"relative"}}>
-            <svg viewBox="0 0 460 170" style={{width:"100%",maxWidth:340,height:"auto"}}>
-              <line x1="52" y1="14" x2="52" y2="30" stroke="#cc2020" strokeWidth="20" strokeLinecap="round"/>
-              <path d="M52 30 C122 30 144 55 144 73 C144 91 122 116 52 116" fill="none" stroke="#cc2020" strokeWidth="20" strokeLinecap="round"/>
-              <line x1="52" y1="116" x2="52" y2="158" stroke="#cc2020" strokeWidth="20" strokeLinecap="round"/>
-              <rect x="42" y="7" width="20" height="9" rx="4" fill="#8b1111"/>
-              <rect x="42" y="158" width="20" height="9" rx="4" fill="#8b1111"/>
-              <text x="76" y="158" fontFamily="'Barlow Condensed',sans-serif" fontSize="62" fontWeight="900" fill="#cc2020" letterSpacing="-1px">ocket</text>
-              <line x1="248" y1="14" x2="248" y2="30" stroke="#1a6bbf" strokeWidth="20" strokeLinecap="round"/>
-              <path d="M248 30 C318 30 340 55 340 73 C340 91 318 116 248 116" fill="none" stroke="#1a6bbf" strokeWidth="20" strokeLinecap="round"/>
-              <line x1="248" y1="116" x2="248" y2="158" stroke="#1a6bbf" strokeWidth="20" strokeLinecap="round"/>
-              <rect x="238" y="7" width="20" height="9" rx="4" fill="#0e3d73"/>
-              <rect x="238" y="158" width="20" height="9" rx="4" fill="#0e3d73"/>
-              <text x="272" y="158" fontFamily="'Barlow Condensed',sans-serif" fontSize="62" fontWeight="900" fill="#1a6bbf" letterSpacing="-1px">lumber</text>
+        <div style={{height:2,background:"var(--cop)"}}/>
+        <div style={{padding:"16px 16px 13px",borderBottom:"1px solid var(--bdr)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:13}}>
+            <svg viewBox="0 0 64 96" style={{width:33,height:50,flexShrink:0}} aria-hidden="true">
+              <line x1="14" y1="8" x2="14" y2="88" stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
+              <path d="M14 14 C44 14 55 26 55 36 C55 46 44 58 14 58" fill="none" stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
             </svg>
+            <div style={{minWidth:0}}>
+              <BC c="POCKET PLUMBER™" s={{fontSize:29,fontWeight:900,
+                letterSpacing:".02em",color:"var(--wht)",display:"block",lineHeight:1}}/>
+              <Mono c="CONTRACTOR-GRADE FIELD REFERENCE" s={{fontSize:11,
+                color:"var(--w50)",letterSpacing:".13em",display:"block",marginTop:7}}/>
+            </div>
           </div>
-
-          {/* Tagline — centered */}
-          <div style={{marginBottom:0,position:"relative",textAlign:"center"}}>
-            <BC c="A contractor-grade field reference"
-              s={{fontSize:15,fontWeight:700,fontStyle:"italic",
-                color:"var(--w80)",display:"block",lineHeight:1.4,
-                letterSpacing:".01em"}}/>
-          </div>
-
-          {/* Red divider bar */}
-          <div style={{height:3,background:"var(--red)",margin:"10px 0 0",
-            marginLeft:-20,marginRight:-20}}/>
-        </div>
-
-        {/* Sub-header bar — like the blue label band on the can */}
-        <div style={{
-          background:"var(--blk2)",
-          padding:"6px 16px",
-          display:"flex",alignItems:"center",justifyContent:"space-between",
-          borderBottom:"1px solid var(--bdr)",
-        }}>
-          <BC c="POCKET PLUMBER™ · CONTRACTOR-GRADE FIELD REFERENCE"
-            s={{fontSize:13,fontWeight:800,letterSpacing:".08em",
-              color:"var(--w40)"}}/>
-          {/* API key indicator */}
-          <button onClick={()=>{setKeyDraft(apiKey);setShowKey(true);}} style={{
-            display:"flex",alignItems:"center",gap:5,padding:"4px 9px",
-            borderRadius:2,
-            border:`1px solid ${apiKey?"rgba(34,197,94,.4)":"var(--bdr2)"}`,
-            background:apiKey?"rgba(34,197,94,.08)":"transparent",
-            cursor:"pointer",
-          }}>
-            <div style={{width:5,height:5,borderRadius:"50%",
-              background:apiKey?"var(--grn)":"var(--w25)"}}/>
-            <BC c={apiKey?"AI ON":"AI OFF"}
-              s={{fontSize:14,fontWeight:800,letterSpacing:".08em",
-                color:apiKey?"var(--grn)":"var(--w40)"}}/>
-          </button>
         </div>
       </div>
 
@@ -5814,16 +3937,9 @@ function HomeScreen({navigate, screen, scanMode, apiKey, setApiKey, showKey, set
       <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",minHeight:0,
         padding:"10px 12px 6px",display:"flex",flexDirection:"column",gap:8}}>
 
-        {/* Scan buttons — full width, prominent */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          {TILES.slice(0,2).map(tile=>(
-            <HomeTile key={tile.id} tile={tile} navigate={navigate} scan/>
-          ))}
-        </div>
-
-        {/* Tool grid — 2×2 */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          {TILES.slice(2,6).map(tile=>(
+        {/* Tool grid — one row */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+          {TILES.map(tile=>(
             <HomeTile key={tile.id} tile={tile} navigate={navigate}/>
           ))}
         </div>
@@ -5834,57 +3950,13 @@ function HomeScreen({navigate, screen, scanMode, apiKey, setApiKey, showKey, set
           background:"var(--blk2)",border:"1px solid var(--bdr)"}}>
           <BC c="CONTRACTOR GRADE · FIELD REFERENCE"
             s={{fontSize:12,fontWeight:800,color:"var(--w25)",letterSpacing:".1em"}}/>
-          <Mono c="v1.0"
+          <Mono c="REV 2.0"
             s={{fontSize:12,color:"var(--w25)",fontWeight:600}}/>
         </div>
 
       </div>
 
-      <NavBar active="home" scanMode={scanMode} navigate={navigate}/>
-
-      {/* API key modal */}
-      {showKey&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",
-          display:"flex",alignItems:"flex-end",zIndex:200}}
-          onClick={e=>{if(e.target===e.currentTarget)setShowKey(false);}}>
-          <div style={{background:"var(--blk2)",border:"1px solid var(--bdr2)",
-            borderTop:"3px solid var(--red)",borderRadius:"4px 4px 0 0",
-            padding:"22px 22px 40px",width:""}}
-            className="slidein">
-            <div className="redbar" style={{fontSize:24,color:"var(--wht)",
-              padding:"6px 12px",marginBottom:16,borderRadius:"var(--r)",
-              display:"inline-block"}}>API Key</div>
-            <p style={{fontSize:16,color:"var(--w50)",lineHeight:1.7,marginBottom:16}}>
-              Stored in your browser only. Get one free at{" "}
-              <span style={{color:"var(--grn)"}}>console.anthropic.com</span>.
-            </p>
-            <input type="password" placeholder="sk-ant-api03-..." value={keyDraft}
-              onChange={e=>setKeyDraft(e.target.value)}
-              onKeyDown={e=>{if(e.key==="Enter"&&keyDraft.trim()){
-                localStorage.setItem("pid_k",keyDraft.trim());
-                setApiKey(keyDraft.trim());setShowKey(false);}}}
-              style={{width:"100%",padding:"12px 14px",borderRadius:"var(--r)",
-                background:"var(--blk3)",border:"1px solid var(--bdr2)",
-                color:"var(--wht)",fontSize:16,outline:"none",marginBottom:12}}
-              autoFocus/>
-            <div style={{display:"flex",gap:10}}>
-              <button className="btn-ghost" style={{flex:1}}
-                onClick={()=>setShowKey(false)}>Cancel</button>
-              <button className="btn-fire" style={{flex:2,padding:"12px 0",fontSize:20}}
-                onClick={()=>{const k=keyDraft.trim();if(!k)return;
-                  localStorage.setItem("pid_k",k);setApiKey(k);setShowKey(false);}}>
-                Save Key
-              </button>
-            </div>
-            {apiKey&&<button onClick={()=>{
-              localStorage.removeItem("pid_k");setApiKey("");setShowKey(false);}}
-              style={{width:"100%",padding:10,marginTop:10,borderRadius:"var(--r)",
-                border:"1px solid rgba(204,32,32,.4)",color:"rgba(255,100,100,.7)",fontSize:15}}>
-              Remove saved key
-            </button>}
-          </div>
-        </div>
-      )}
+      <NavBar active="home" navigate={navigate}/>
     </div>
   );
 }

@@ -334,6 +334,216 @@ const ONBOARD_FEATURES = [
 
 
 
+
+/* ═══════════════════════════════════════════════════════════
+   LANGUAGES — UI chrome only.
+   Technical fitting vocabulary is marked ⚑ VERIFY: those terms
+   vary by region and need confirming with actual tradesmen
+   before they can be trusted.
+═══════════════════════════════════════════════════════════ */
+const LS_LANG = "pp_lang";
+const LANGS = [
+  { id:"en", label:"English",      native:"English"      },
+  { id:"es", label:"Spanish (MX)", native:"Español"      },
+  { id:"ru", label:"Russian",      native:"Русский"      },
+  { id:"uk", label:"Ukrainian",    native:"Українська"   },
+];
+
+const STRINGS = {
+  /* Navigation */
+  "nav.home":      { es:"INICIO",       ru:"ГЛАВНАЯ",      uk:"ГОЛОВНА"    },
+  "nav.connect":   { es:"CONECTAR",     ru:"СОЕДИНИТЬ",    uk:"З'ЄДНАТИ"   },
+  "nav.fittings":  { es:"CONEXIONES",   ru:"ФИТИНГИ",      uk:"ФІТИНГИ"    },
+  "nav.ref":       { es:"REF",          ru:"СПРАВ",        uk:"ДОВІД"      },
+
+  /* Home */
+  "home.tagline":  { es:"REFERENCIA PROFESIONAL DE CAMPO",
+                     ru:"ПРОФЕССИОНАЛЬНЫЙ СПРАВОЧНИК",
+                     uk:"ПРОФЕСІЙНИЙ ДОВІДНИК" },
+  "tile.connect":       { es:"COMPATIBILIDAD", ru:"СОВМЕСТИМОСТЬ", uk:"СУМІСНІСТЬ" },
+  "tile.connect.sub":   { es:"¿Se pueden conectar estos dos tubos?",
+                          ru:"Соединяются ли эти две трубы?",
+                          uk:"Чи з'єднуються ці дві труби?" },
+  "tile.fittings":      { es:"CONEXIONES", ru:"ФИТИНГИ", uk:"ФІТИНГИ" },
+  "tile.fittings.sub":  { es:"Números de parte y dónde comprar",
+                          ru:"Номера деталей и где купить",
+                          uk:"Номери деталей і де купити" },
+  "tile.reference":     { es:"REFERENCIA", ru:"СПРАВОЧНИК", uk:"ДОВІДНИК" },
+  "tile.reference.sub": { es:"Tabla OD · solventes · consejos · peligro",
+                          ru:"Таблица OD · растворители · советы · опасность",
+                          uk:"Таблиця OD · розчинники · поради · небезпека" },
+  "home.footer":   { es:"REFERENCIA PROFESIONAL DE CAMPO",
+                     ru:"ПРОФЕССИОНАЛЬНЫЙ СПРАВОЧНИК",
+                     uk:"ПРОФЕСІЙНИЙ ДОВІДНИК" },
+
+  /* Screen headers */
+  "screen.reference": { es:"Referencia",     ru:"Справочник",   uk:"Довідник"   },
+  "screen.fittings":  { es:"Conexiones",     ru:"Фитинги",      uk:"Фітинги"    },
+  "screen.connect":   { es:"Conectar",       ru:"Соединить",    uk:"З'єднати"   },
+
+  /* Reference sub-tabs */
+  "ref.table":     { es:"📐 TABLA OD",   ru:"📐 ТАБЛИЦА OD",  uk:"📐 ТАБЛИЦЯ OD" },
+  "ref.circ":      { es:"🧵 CORDÓN",     ru:"🧵 ШНУР",        uk:"🧵 ШНУР"       },
+  "ref.solvent":   { es:"🧪 SOLVENTES",  ru:"🧪 РАСТВОРИТЕЛИ",uk:"🧪 РОЗЧИННИКИ" },
+  "ref.tips":      { es:"💡 CONSEJOS",   ru:"💡 СОВЕТЫ",      uk:"💡 ПОРАДИ"     },
+  "ref.danger":    { es:"⚠️ PELIGRO",    ru:"⚠️ ОПАСНОСТЬ",   uk:"⚠️ НЕБЕЗПЕКА"  },
+
+  /* Selector labels */
+  "sel.material":  { es:"Material",       ru:"Материал",     uk:"Матеріал"    },
+  "sel.type":      { es:"Tipo",           ru:"Тип",          uk:"Тип"         },
+  "sel.size":      { es:"Medida",         ru:"Размер",       uk:"Розмір"      },
+  "sel.all":       { es:"Todos",          ru:"Все",          uk:"Усі"         },
+  "port.end1":     { es:"Extremo 1",      ru:"Конец 1",      uk:"Кінець 1"    },
+  "port.end2":     { es:"Extremo 2",      ru:"Конец 2",      uk:"Кінець 2"    },
+  "port.large":    { es:"Extremo grande", ru:"Больший конец",uk:"Більший кінець" },
+  "port.small":    { es:"Extremo chico",  ru:"Меньший конец",uk:"Менший кінець"  },
+  "port.runA":     { es:"Corrida A",      ru:"Проход А",     uk:"Прохід А"    },
+  "port.runB":     { es:"Corrida B",      ru:"Проход Б",     uk:"Прохід Б"    },
+  "port.branch":   { es:"Ramal",          ru:"Отвод",        uk:"Відвід"      },
+  "port.branch1":  { es:"Ramal 1",        ru:"Отвод 1",      uk:"Відвід 1"    },
+  "port.branch2":  { es:"Ramal 2",        ru:"Отвод 2",      uk:"Відвід 2"    },
+  "port.fix1":     { es:"Mueble 1",       ru:"Прибор 1",     uk:"Прилад 1"    },
+  "port.fix2":     { es:"Mueble 2",       ru:"Прибор 2",     uk:"Прилад 2"    },
+  "port.inlet":    { es:"Entrada",        ru:"Вход",         uk:"Вхід"        },
+  "port.outlet":   { es:"Salida",         ru:"Выход",        uk:"Вихід"       },
+  "port.main":     { es:"Principal",      ru:"Основная",     uk:"Основна"     },
+  "port.thisPipe": { es:"Este tubo",      ru:"Эта труба",    uk:"Ця труба"    },
+  "port.otherPipe":{ es:"Otro tubo",      ru:"Другая труба", uk:"Інша труба"  },
+  "port.pipeOD":   { es:"OD del tubo",    ru:"Наружный Ø",   uk:"Зовнішній Ø" },
+  "port.spigot":   { es:"Espiga",         ru:"Гладкий конец",uk:"Гладкий кінець" },
+  "port.socket":   { es:"Campana",        ru:"Раструб",      uk:"Розтруб"     },
+  "port.pipeThread":{es:"Rosca de tubo",  ru:"Трубная резьба",uk:"Трубна різьба"},
+  "port.hoseThread":{es:"Rosca de manguera",ru:"Шланговая резьба",uk:"Шлангова різьба"},
+  "spec.straight": { es:"RECTO",          ru:"ПРЯМОЙ",       uk:"ПРЯМИЙ"      },
+  "spec.reducing": { es:"REDUCIDO",       ru:"ПЕРЕХОДНОЙ",   uk:"ПЕРЕХІДНИЙ"  },
+  "spec.match":    { es:"✕ igualar",      ru:"✕ выровнять",  uk:"✕ вирівняти" },
+
+  /* Card / retailer */
+  "card.findAt":   { es:"Buscar en tienda", ru:"Найти в магазине", uk:"Знайти в магазині" },
+  "card.search":   { es:"Buscar →",       ru:"Искать →",     uk:"Шукати →"    },
+  "card.openPart": { es:"Ver parte →",    ru:"Открыть →",    uk:"Відкрити →"  },
+  "card.note":     { es:"Nota de campo",  ru:"Заметка",      uk:"Примітка"    },
+  "card.important":{ es:"⚠ Importante",   ru:"⚠ Важно",      uk:"⚠ Важливо"   },
+  "card.verified": { es:"✓ VERIFICADO",   ru:"✓ ПРОВЕРЕНО",  uk:"✓ ПЕРЕВІРЕНО" },
+  "card.none":     { es:"No se encontraron conexiones",
+                     ru:"Фитинги не найдены",
+                     uk:"Фітинги не знайдено" },
+
+  /* Paywall */
+  "pay.ended":     { es:"PRUEBA TERMINADA", ru:"ПРОБНЫЙ ПЕРИОД ОКОНЧЕН", uk:"ПРОБНИЙ ПЕРІОД ЗАКІНЧИВСЯ" },
+  "pay.blurb":     { es:"Se acabaron tus 3 días gratis. Desbloquéalo una vez y es tuyo — sin suscripción, sin cuenta, funciona sin señal.",
+                     ru:"Ваши 3 бесплатных дня закончились. Разблокируйте один раз — и оно ваше: без подписки, без аккаунта, работает без связи.",
+                     uk:"Ваші 3 безкоштовні дні закінчилися. Розблокуйте один раз — і воно ваше: без підписки, без акаунта, працює без зв'язку." },
+  "pay.unlock":    { es:"Desbloquear — {p} pago único",
+                     ru:"Разблокировать — {p} разовый платёж",
+                     uk:"Розблокувати — {p} разовий платіж" },
+  "pay.opening":   { es:"Abriendo pago…",  ru:"Открываем оплату…", uk:"Відкриваємо оплату…" },
+  "pay.secure":    { es:"Pago seguro con Stripe · sin cuenta",
+                     ru:"Безопасная оплата Stripe · без аккаунта",
+                     uk:"Безпечна оплата Stripe · без акаунта" },
+  "pay.restoreQ":  { es:"¿Ya lo compraste? Restaurar compra",
+                     ru:"Уже купили? Восстановить покупку",
+                     uk:"Вже придбали? Відновити покупку" },
+  "pay.restore":   { es:"RESTAURAR COMPRA", ru:"ВОССТАНОВИТЬ ПОКУПКУ", uk:"ВІДНОВИТИ ПОКУПКУ" },
+  "pay.restoreHelp":{es:"Escribe el correo que usaste al pagar. Teléfono nuevo, reinstalación, navegador borrado — esto lo recupera.",
+                     ru:"Введите email, которым вы платили. Новый телефон, переустановка, очищенный браузер — это всё вернёт.",
+                     uk:"Введіть email, яким ви платили. Новий телефон, перевстановлення, очищений браузер — це все поверне." },
+  "pay.restoreBtn":{ es:"Restaurar",       ru:"Восстановить", uk:"Відновити"   },
+  "pay.checking":  { es:"Verificando…",    ru:"Проверяем…",   uk:"Перевіряємо…" },
+  "pay.back":      { es:"Atrás",           ru:"Назад",        uk:"Назад"       },
+  "pay.noFound":   { es:"No se encontró ninguna compra con ese correo.",
+                     ru:"Покупка с таким email не найдена.",
+                     uk:"Покупку з таким email не знайдено." },
+  "pay.needEmail": { es:"Escribe el correo que usaste al pagar.",
+                     ru:"Введите email, которым вы платили.",
+                     uk:"Введіть email, яким ви платили." },
+  "pay.offline":   { es:"Sin conexión. El pago necesita señal — inténtalo donde tengas servicio.",
+                     ru:"Нет связи. Для оплаты нужен интернет — попробуйте там, где есть сигнал.",
+                     uk:"Немає зв'язку. Для оплати потрібен інтернет — спробуйте там, де є сигнал." },
+  "pay.f1":  { es:"Tablas OD + método del cordón", ru:"Таблицы OD + метод шнура",   uk:"Таблиці OD + метод шнура" },
+  "pay.f1s": { es:"Identifica cualquier tubo con una cinta métrica",
+               ru:"Определите любую трубу рулеткой",
+               uk:"Визначте будь-яку трубу рулеткою" },
+  "pay.f2":  { es:"Compatibilidad", ru:"Совместимость", uk:"Сумісність" },
+  "pay.f2s": { es:"Qué conecta con qué, y cómo",
+               ru:"Что с чем соединяется и как",
+               uk:"Що з чим з'єднується і як" },
+  "pay.f3":  { es:"Conexiones + números de parte", ru:"Фитинги + номера деталей", uk:"Фітинги + номери деталей" },
+  "pay.f3s": { es:"Partes verificadas, directo a la página del producto",
+               ru:"Проверенные детали, прямо на страницу товара",
+               uk:"Перевірені деталі, прямо на сторінку товару" },
+  "pay.f4":  { es:"Solventes + consejos", ru:"Растворители + советы", uk:"Розчинники + поради" },
+  "pay.f4s": { es:"Cemento correcto, primer correcto, tiempo de curado correcto",
+               ru:"Правильный клей, праймер и время застывания",
+               uk:"Правильний клей, праймер і час застигання" },
+  "pay.f5":  { es:"Identificación de peligros", ru:"Определение опасностей", uk:"Визначення небезпек" },
+  "pay.f5s": { es:"Asbesto, plomo, poli-B, Kitec",
+               ru:"Асбест, свинец, поли-Б, Kitec",
+               uk:"Азбест, свинець, полі-Б, Kitec" },
+  "pay.pitch":{es:"Como tener al mejor mostrador de refacciones en el bolsillo.",
+               ru:"Как лучший продавец за прилавком — только в кармане.",
+               uk:"Як найкращий продавець за прилавком — тільки в кишені." },
+
+  /* Trial banner */
+  "trial.days":    { es:"PRUEBA · {n} DÍAS",  ru:"ПРОБНЫЙ · {n} ДН.",  uk:"ПРОБНИЙ · {n} ДН." },
+  "trial.hours":   { es:"PRUEBA · {n} HORAS", ru:"ПРОБНЫЙ · {n} Ч.",   uk:"ПРОБНИЙ · {n} ГОД." },
+  "trial.unlock":  { es:"Desbloquear {p} →",  ru:"Разблокировать {p} →", uk:"Розблокувати {p} →" },
+
+  /* Onboarding */
+  "ob.sub":        { es:"Referencia profesional de campo",
+                     ru:"Профессиональный полевой справочник",
+                     uk:"Професійний польовий довідник" },
+  "ob.start":      { es:"COMENZAR",  ru:"НАЧАТЬ",  uk:"ПОЧАТИ" },
+
+  /* Language picker */
+  "lang.title":    { es:"Idioma", ru:"Язык", uk:"Мова" },
+};
+
+let CURRENT_LANG = (() => { try { return localStorage.getItem(LS_LANG) || "en"; } catch { return "en"; } })();
+
+/* Translate. English is the source — a missing key returns the English text. */
+function T(key, en, vars) {
+  const row = STRINGS[key];
+  let out = (CURRENT_LANG === "en" || !row) ? en : (row[CURRENT_LANG] ?? en);
+  if (vars) for (const k in vars) out = out.split("{" + k + "}").join(vars[k]);
+  return out;
+}
+
+/* ═══ Language picker ═══ */
+function LangPicker({ open, onClose, lang, setLang }) {
+  if (!open) return null;
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:200,
+      background:"rgba(0,0,0,.72)",display:"flex",alignItems:"flex-end"}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",
+        background:"var(--blk2)",borderTop:"2px solid var(--cop)",
+        borderRadius:"14px 14px 0 0",padding:"18px 16px 26px"}}>
+        <BC c={T("lang.title","Language")} s={{fontSize:20,fontWeight:900,
+          letterSpacing:".1em",color:"var(--w50)",display:"block",
+          marginBottom:14,textTransform:"uppercase"}}/>
+        {LANGS.map(l=>{
+          const on = l.id === lang;
+          return (
+            <button key={l.id} onClick={()=>{setLang(l.id);onClose();}}
+              style={{width:"100%",display:"flex",alignItems:"center",
+                justifyContent:"space-between",gap:12,padding:"16px 16px",
+                marginBottom:8,borderRadius:"var(--rm)",cursor:"pointer",
+                background:on?"rgba(201,121,60,.14)":"var(--blk3)",
+                border:`1px solid ${on?"var(--cop)":"var(--bdr2)"}`}}>
+              <div style={{textAlign:"left"}}>
+                <BC c={l.native} s={{fontSize:22,fontWeight:900,
+                  color:on?"var(--cop)":"var(--wht)",display:"block"}}/>
+                <div style={{fontSize:14,color:"var(--w50)",marginTop:1}}>{l.label}</div>
+              </div>
+              {on && <BC c="✓" s={{fontSize:24,color:"var(--cop)"}}/>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    LICENSE — 3 day trial, then $12 one-time unlock
    Token is stored locally so the unlock survives with no signal.
@@ -370,7 +580,7 @@ function trialInfo() {
 const hasLicense = () => !!lsGet(LS_LICENSE);
 
 /* ═══ Paywall ═══ */
-function PaywallScreen({ onUnlocked }) {
+function PaywallScreen({ onUnlocked, onLang, lang }) {
   const [busy, setBusy]   = useState(false);
   const [err, setErr]     = useState("");
   const [mode, setMode]   = useState("buy");
@@ -384,13 +594,13 @@ function PaywallScreen({ onUnlocked }) {
       if (d.url) { window.location.href = d.url; return; }
       setErr(d.error || "Could not start checkout. Try again.");
     } catch {
-      setErr("No connection. Checkout needs signal — try again where you have service.");
+      setErr(T("pay.offline","No connection. Checkout needs signal — try again where you have service."));
     }
     setBusy(false);
   };
 
   const restore = async () => {
-    if (!email.trim()) { setErr("Enter the email you paid with."); return; }
+    if (!email.trim()) { setErr(T("pay.needEmail","Enter the email you paid with.")); return; }
     setBusy(true); setErr("");
     try {
       const r = await fetch(`/api/verify?email=${encodeURIComponent(email.trim())}`);
@@ -399,7 +609,7 @@ function PaywallScreen({ onUnlocked }) {
         lsSet(LS_LICENSE, d.token); lsSet(LS_EMAIL, d.email || email);
         onUnlocked(); return;
       }
-      setErr("No purchase found for that email.");
+      setErr(T("pay.noFound","No purchase found for that email."));
     } catch {
       setErr("Could not reach the server. Check your connection.");
     }
@@ -407,11 +617,11 @@ function PaywallScreen({ onUnlocked }) {
   };
 
   const FEATURES = [
-    ["OD tables + string method", "Identify any pipe with a tape measure"],
-    ["Compatibility",            "What connects to what, and how"],
-    ["Fittings + part numbers",  "Verified parts, straight to the product page"],
-    ["Solvents + pro tips",      "Right cement, right primer, right cure time"],
-    ["Hazard identification",    "Asbestos, lead, poly-B, Kitec"],
+    [T("pay.f1","OD tables + string method"), T("pay.f1s","Identify any pipe with a tape measure")],
+    [T("pay.f2","Compatibility"),             T("pay.f2s","What connects to what, and how")],
+    [T("pay.f3","Fittings + part numbers"),   T("pay.f3s","Verified parts, straight to the product page")],
+    [T("pay.f4","Solvents + pro tips"),       T("pay.f4s","Right cement, right primer, right cure time")],
+    [T("pay.f5","Hazard identification"),     T("pay.f5s","Asbestos, lead, poly-B, Kitec")],
   ];
 
   return (
@@ -426,14 +636,24 @@ function PaywallScreen({ onUnlocked }) {
             stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
         </svg>
 
-        <BC c="TRIAL ENDED" s={{fontSize:18,fontWeight:900,letterSpacing:".18em",
+        <button onClick={onLang} style={{alignSelf:"flex-end",marginBottom:6,
+          padding:"9px 13px",borderRadius:"var(--r)",background:"var(--blk3)",
+          border:"1px solid var(--bdr2)",cursor:"pointer",minHeight:"unset"}}>
+          <BC c={(LANGS.find(l=>l.id===lang)||LANGS[0]).native}
+            s={{fontSize:17,fontWeight:800,color:"var(--cop)"}}/>
+        </button>
+        <BC c={T("pay.ended","TRIAL ENDED")} s={{fontSize:18,fontWeight:900,letterSpacing:".18em",
           color:"var(--cop)",marginBottom:8}}/>
         <BC c="POCKET PLUMBER™" s={{fontSize:31,fontWeight:900,letterSpacing:".02em",
           color:"var(--wht)",marginBottom:6,textAlign:"center"}}/>
         <div style={{fontSize:18,color:"var(--w50)",textAlign:"center",
           marginBottom:24,lineHeight:1.5,maxWidth:320}}>
-          Your 3 free days are up. Unlock it once and it&rsquo;s yours — no subscription,
-          no account, works with no signal.
+          {T("pay.blurb","Your 3 free days are up. Unlock it once and it\u2019s yours — no subscription, no account, works with no signal.")}
+        </div>
+
+        <div style={{fontSize:16,color:"var(--cop)",textAlign:"center",
+          marginBottom:20,lineHeight:1.5,maxWidth:330}}>
+          {T("pay.pitch","Like having the best counter guy at the parts house in your pocket.")}
         </div>
 
         {mode === "buy" ? (
@@ -455,27 +675,27 @@ function PaywallScreen({ onUnlocked }) {
             <button onClick={buy} disabled={busy} className="btn-fire"
               style={{width:"100%",maxWidth:360,padding:"16px",borderRadius:"var(--r)",
                 border:"none",opacity:busy?.6:1,marginBottom:10}}>
-              {busy ? "Opening checkout…" : `Unlock — ${PRICE_LABEL} one time`}
+              {busy ? T("pay.opening","Opening checkout…")
+                    : T("pay.unlock",`Unlock — ${PRICE_LABEL} one time`,{p:PRICE_LABEL})}
             </button>
 
             <div style={{fontSize:16,color:"var(--w25)",marginBottom:16,textAlign:"center"}}>
-              Secure checkout by Stripe · no account needed
+              {T("pay.secure","Secure checkout by Stripe · no account needed")}
             </div>
 
             <button onClick={()=>{setMode("restore");setErr("");}}
               style={{background:"none",border:"none",cursor:"pointer",
                 fontSize:17,color:"var(--w50)",textDecoration:"underline",
                 fontFamily:"inherit",minHeight:"unset"}}>
-              Already bought it? Restore purchase
+              {T("pay.restoreQ","Already bought it? Restore purchase")}
             </button>
           </>
         ) : (
           <div style={{width:"100%",maxWidth:360}}>
-            <BC c="RESTORE PURCHASE" s={{fontSize:17,fontWeight:900,letterSpacing:".12em",
+            <BC c={T("pay.restore","RESTORE PURCHASE")} s={{fontSize:17,fontWeight:900,letterSpacing:".12em",
               color:"var(--w50)",display:"block",marginBottom:10}}/>
             <div style={{fontSize:17,color:"var(--w50)",marginBottom:12,lineHeight:1.5}}>
-              Enter the email you used at checkout. New phone, reinstall, cleared browser —
-              this brings it back.
+              {T("pay.restoreHelp","Enter the email you used at checkout. New phone, reinstall, cleared browser — this brings it back.")}
             </div>
             <input value={email} onChange={e=>setEmail(e.target.value)}
               type="email" inputMode="email" autoCapitalize="off" autoCorrect="off"
@@ -486,13 +706,13 @@ function PaywallScreen({ onUnlocked }) {
             <button onClick={restore} disabled={busy} className="btn-fire"
               style={{width:"100%",padding:"15px",borderRadius:"var(--r)",
                 border:"none",opacity:busy?.6:1,marginBottom:12}}>
-              {busy ? "Checking…" : "Restore"}
+              {busy ? T("pay.checking","Checking…") : T("pay.restoreBtn","Restore")}
             </button>
             <button onClick={()=>{setMode("buy");setErr("");}}
               style={{background:"none",border:"none",cursor:"pointer",width:"100%",
                 fontSize:17,color:"var(--w50)",textDecoration:"underline",
                 fontFamily:"inherit",minHeight:"unset"}}>
-              Back
+              {T("pay.back","Back")}
             </button>
           </div>
         )}
@@ -520,11 +740,11 @@ function TrialBanner({ trial, onBuy }) {
       borderBottom:`1px solid ${urgent ? "rgba(239,68,68,.3)" : "rgba(201,121,60,.28)"}`,
     }}>
       <BC c={urgent
-              ? `TRIAL · ${trial.hoursLeft} HOUR${trial.hoursLeft===1?"":"S"} LEFT`
-              : `TRIAL · ${trial.daysLeft} DAYS LEFT`}
+              ? T("trial.hours",`TRIAL · ${trial.hoursLeft} HOUR${trial.hoursLeft===1?"":"S"} LEFT`,{n:trial.hoursLeft})
+              : T("trial.days",`TRIAL · ${trial.daysLeft} DAYS LEFT`,{n:trial.daysLeft})}
         s={{fontSize:16,fontWeight:900,letterSpacing:".1em",
           color: urgent ? "#ef4444" : "var(--cop)"}}/>
-      <BC c={`Unlock ${PRICE_LABEL} →`} s={{fontSize:17,fontWeight:800,
+      <BC c={T("trial.unlock",`Unlock ${PRICE_LABEL} →`,{p:PRICE_LABEL})} s={{fontSize:17,fontWeight:800,
         color: urgent ? "#ef4444" : "var(--cop)"}}/>
     </button>
   );
@@ -534,7 +754,12 @@ export default function App() {
   /* ── Screens: home | fittings | connect | reference */
   const [screen, setScreen] = useState("home");
 
-  /* ── License: 3-day trial, then $12 unlock ── */
+  /* ── Language ── */
+  const [lang, setLangState] = useState(CURRENT_LANG);
+  const [langOpen, setLangOpen] = useState(false);
+  const setLang = (l) => { CURRENT_LANG = l; lsSet(LS_LANG, l); setLangState(l); };
+
+  /* ── License: 3-day trial, then unlock ── */
   const [licensed, setLicensed] = useState(hasLicense);
   const [trial, setTrial]       = useState(trialInfo);
   const [forcePay, setForcePay] = useState(false);
@@ -600,12 +825,19 @@ export default function App() {
     el.textContent = CSS;
   }, []);
 
-  if (locked) return <PaywallScreen onUnlocked={()=>{setLicensed(true);setForcePay(false);}}/>;
+  if (locked) return (
+    <>
+      <PaywallScreen onUnlocked={()=>{setLicensed(true);setForcePay(false);}}
+        onLang={()=>setLangOpen(true)} lang={lang}/>
+      <LangPicker open={langOpen} onClose={()=>setLangOpen(false)} lang={lang} setLang={setLang}/>
+    </>
+  );
 
   if (screen === "home") return (
     <>
       <HomeScreen {...nav} trial={!licensed ? trial : null}
-        onBuy={()=>setForcePay(true)}/>
+        onBuy={()=>setForcePay(true)} onLang={()=>setLangOpen(true)} lang={lang}/>
+      <LangPicker open={langOpen} onClose={()=>setLangOpen(false)} lang={lang} setLang={setLang}/>
       {showOnboard && (
         <div onClick={dismissOnboard} style={{
           position:"fixed",inset:0,background:"rgba(10,10,10,.97)",
@@ -700,10 +932,10 @@ function NavBar({active, navigate}) {
   }, []);
 
   const tabs = [
-    {id:"home",      short:"HOME"},
-    {id:"connect",   short:"CONNECT"},
-    {id:"fittings",  short:"FITTINGS"},
-    {id:"reference", short:"REF"},
+    {id:"home",      short:T("nav.home","HOME")},
+    {id:"connect",   short:T("nav.connect","CONNECT")},
+    {id:"fittings",  short:T("nav.fittings","FITTINGS")},
+    {id:"reference", short:T("nav.ref","REF")},
   ];
 
   return (
@@ -818,13 +1050,13 @@ function ReferenceScreen({screen, navigate}) {
 
   return (
     <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
-      <ScreenHeader title="Reference"/>
+      <ScreenHeader title={T("screen.reference","Reference")}/>
 
       <div style={{background:"var(--blk2)",borderBottom:"1px solid var(--bdr)",
         flexShrink:0,padding:"6px 10px",
         overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
         <div style={{display:"flex",gap:6,width:"max-content"}}>
-          {[{id:"table",label:"📐 OD TABLE"},{id:"circ",label:"🧵 STRING"},{id:"solvent",label:"🧪 SOLVENTS"},{id:"tips",label:"💡 PRO TIPS"},{id:"danger",label:"⚠️ DANGER"}].map(t=>(
+          {[{id:"table",label:T("ref.table","📐 OD TABLE")},{id:"circ",label:T("ref.circ","🧵 STRING")},{id:"solvent",label:T("ref.solvent","🧪 SOLVENTS")},{id:"tips",label:T("ref.tips","💡 PRO TIPS")},{id:"danger",label:T("ref.danger","⚠️ DANGER")}].map(t=>(
             <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{
               padding:"7px 14px",borderRadius:"6px",whiteSpace:"nowrap",minHeight:"unset",
               fontFamily:"'Barlow Condensed',sans-serif",
@@ -2250,7 +2482,7 @@ const FITTING_PORTS = {
 };
 
 /* Labels for each port, in order */
-const PORT_LABELS = {
+const PORT_LABELS_EN = {
   coupling:   ["End 1","End 2"],
   reducer:    ["Large end","Small end"],
   elbow90:    ["End 1","End 2"],
@@ -2275,6 +2507,24 @@ const PORT_LABELS = {
   compression:["End 1","End 2"],
   hose:       ["Pipe thread","Hose thread"],
 };
+
+const PORT_KEY = {
+  "End 1":"port.end1","End 2":"port.end2","Large end":"port.large","Small end":"port.small",
+  "Run A":"port.runA","Run B":"port.runB","Branch":"port.branch",
+  "Branch 1":"port.branch1","Branch 2":"port.branch2",
+  "Fixture 1":"port.fix1","Fixture 2":"port.fix2",
+  "Inlet":"port.inlet","Outlet":"port.outlet","Main":"port.main","Size":"sel.size",
+  "This pipe":"port.thisPipe","Other pipe":"port.otherPipe","Pipe OD":"port.pipeOD",
+  "Spigot":"port.spigot","Socket":"port.socket",
+  "Pipe thread":"port.pipeThread","Hose thread":"port.hoseThread",
+};
+/* Resolves port labels through T() at render time */
+const PORT_LABELS = new Proxy(PORT_LABELS_EN, {
+  get(t, k) {
+    const arr = t[k];
+    return Array.isArray(arr) ? arr.map(l => T(PORT_KEY[l] || "", l)) : arr;
+  }
+});
 
 
 /* ════════════════════════════════════════════════════════════
@@ -3023,7 +3273,7 @@ function FittingsScreen({screen, navigate}) {
 
   return (
     <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
-      <ScreenHeader title="Fittings"/>
+      <ScreenHeader title={T("screen.fittings","Fittings")}/>
 
       {/* Selectors */}
       <div style={{padding:"10px 14px 0",background:"var(--blk2)",
@@ -4414,7 +4664,7 @@ function CompatScreen({screen, navigate}) {
 
   return (
     <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
-      <ScreenHeader title="Connect"/>
+      <ScreenHeader title={T("screen.connect","Connect")}/>
 
       <div className="scroll" style={{flex:1,minHeight:0,padding:"16px 16px 28px"}}>
 
@@ -4736,13 +4986,13 @@ function HomeTile({tile, navigate}) {
 }
 
 
-function HomeScreen({navigate, screen, trial, onBuy}) {
+function HomeScreen({navigate, screen, trial, onBuy, onLang, lang}) {
 
   const TILES = [
     {
       id:"connect",
-      label:"COMPATIBILITY",
-      sub:"Can these two pipes connect?",
+      label:T("tile.connect","COMPATIBILITY"),
+      sub:T("tile.connect.sub","Can these two pipes connect?"),
       icon:(
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -4758,8 +5008,8 @@ function HomeScreen({navigate, screen, trial, onBuy}) {
     },
     {
       id:"fittings",
-      label:"FITTINGS",
-      sub:"Part numbers + where to buy",
+      label:T("tile.fittings","FITTINGS"),
+      sub:T("tile.fittings.sub","Part numbers + where to buy"),
       icon:(
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -4775,8 +5025,8 @@ function HomeScreen({navigate, screen, trial, onBuy}) {
     },
     {
       id:"reference",
-      label:"REFERENCE",
-      sub:"OD table · solvents · tips · danger",
+      label:T("tile.reference","REFERENCE"),
+      sub:T("tile.reference.sub","OD table · solvents · tips · danger"),
       icon:(
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -4803,12 +5053,19 @@ function HomeScreen({navigate, screen, trial, onBuy}) {
               <line x1="14" y1="8" x2="14" y2="88" stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
               <path d="M14 14 C44 14 55 26 55 36 C55 46 44 58 14 58" fill="none" stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
             </svg>
-            <div style={{minWidth:0}}>
+            <div style={{minWidth:0,flex:1}}>
               <BC c="POCKET PLUMBER™" s={{fontSize:29,fontWeight:900,
                 letterSpacing:".02em",color:"var(--wht)",display:"block",lineHeight:1}}/>
-              <Mono c="CONTRACTOR-GRADE FIELD REFERENCE" s={{fontSize:14,
+              <Mono c={T("home.tagline","CONTRACTOR-GRADE FIELD REFERENCE")} s={{fontSize:14,
                 color:"var(--w50)",letterSpacing:".13em",display:"block",marginTop:7}}/>
             </div>
+            <button onClick={onLang} aria-label="Language" style={{
+              flexShrink:0,padding:"10px 13px",borderRadius:"var(--r)",
+              background:"var(--blk3)",border:"1px solid var(--bdr2)",
+              cursor:"pointer",minHeight:"unset"}}>
+              <BC c={(LANGS.find(l=>l.id===lang)||LANGS[0]).native}
+                s={{fontSize:17,fontWeight:800,color:"var(--cop)"}}/>
+            </button>
           </div>
         </div>
       </div>
@@ -4829,7 +5086,7 @@ function HomeScreen({navigate, screen, trial, onBuy}) {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
           padding:"6px 10px",borderRadius:"var(--r)",
           background:"var(--blk2)",border:"1px solid var(--bdr)"}}>
-          <BC c="CONTRACTOR GRADE · FIELD REFERENCE"
+          <BC c={T("home.footer","CONTRACTOR GRADE · FIELD REFERENCE")}
             s={{fontSize:15,fontWeight:800,color:"var(--w25)",letterSpacing:".1em"}}/>
           <Mono c="REV 2.0"
             s={{fontSize:15,color:"var(--w25)",fontWeight:600}}/>

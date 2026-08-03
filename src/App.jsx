@@ -333,9 +333,240 @@ const ONBOARD_FEATURES = [
 ];
 
 
+
+/* ═══════════════════════════════════════════════════════════
+   LICENSE — 3 day trial, then $12 one-time unlock
+   Token is stored locally so the unlock survives with no signal.
+═══════════════════════════════════════════════════════════ */
+const TRIAL_DAYS = 3;
+const PRICE_LABEL = "$12";
+const LS_INSTALL = "pp_install";
+const LS_LICENSE = "pp_license";
+const LS_EMAIL   = "pp_email";
+const DAY_MS = 86400000;
+
+function lsGet(k){ try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k,v){ try { localStorage.setItem(k,v); } catch {} }
+
+/* First launch stamps the install date */
+function installTime() {
+  let t = lsGet(LS_INSTALL);
+  if (!t) { t = String(Date.now()); lsSet(LS_INSTALL, t); }
+  const n = Number(t);
+  return Number.isFinite(n) && n > 0 ? n : Date.now();
+}
+
+function trialInfo() {
+  const elapsed = Date.now() - installTime();
+  const msLeft  = TRIAL_DAYS * DAY_MS - elapsed;
+  return {
+    active:    msLeft > 0,
+    msLeft,
+    daysLeft:  Math.max(0, Math.ceil(msLeft / DAY_MS)),
+    hoursLeft: Math.max(0, Math.ceil(msLeft / 3600000)),
+  };
+}
+
+const hasLicense = () => !!lsGet(LS_LICENSE);
+
+/* ═══ Paywall ═══ */
+function PaywallScreen({ onUnlocked }) {
+  const [busy, setBusy]   = useState(false);
+  const [err, setErr]     = useState("");
+  const [mode, setMode]   = useState("buy");
+  const [email, setEmail] = useState("");
+
+  const buy = async () => {
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch("/api/checkout", { method:"POST" });
+      const d = await r.json();
+      if (d.url) { window.location.href = d.url; return; }
+      setErr(d.error || "Could not start checkout. Try again.");
+    } catch {
+      setErr("No connection. Checkout needs signal — try again where you have service.");
+    }
+    setBusy(false);
+  };
+
+  const restore = async () => {
+    if (!email.trim()) { setErr("Enter the email you paid with."); return; }
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch(`/api/verify?email=${encodeURIComponent(email.trim())}`);
+      const d = await r.json();
+      if (d.paid && d.token) {
+        lsSet(LS_LICENSE, d.token); lsSet(LS_EMAIL, d.email || email);
+        onUnlocked(); return;
+      }
+      setErr("No purchase found for that email.");
+    } catch {
+      setErr("Could not reach the server. Check your connection.");
+    }
+    setBusy(false);
+  };
+
+  const FEATURES = [
+    ["OD tables + string method", "Identify any pipe with a tape measure"],
+    ["Compatibility",            "What connects to what, and how"],
+    ["Fittings + part numbers",  "Verified parts, straight to the product page"],
+    ["Solvents + pro tips",      "Right cement, right primer, right cure time"],
+    ["Hazard identification",    "Asbestos, lead, poly-B, Kitec"],
+  ];
+
+  return (
+    <div style={{height:"100%",display:"flex",flexDirection:"column",background:"var(--blk)"}}>
+      <div style={{height:2,background:"var(--cop)",flexShrink:0}}/>
+      <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",
+        padding:"28px 20px 32px",display:"flex",flexDirection:"column",alignItems:"center"}}>
+
+        <svg viewBox="0 0 64 96" style={{width:46,marginBottom:14}} aria-hidden="true">
+          <line x1="14" y1="8" x2="14" y2="88" stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
+          <path d="M14 14 C44 14 55 26 55 36 C55 46 44 58 14 58" fill="none"
+            stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
+        </svg>
+
+        <BC c="TRIAL ENDED" s={{fontSize:15,fontWeight:900,letterSpacing:".18em",
+          color:"var(--cop)",marginBottom:8}}/>
+        <BC c="POCKET PLUMBER™" s={{fontSize:31,fontWeight:900,letterSpacing:".02em",
+          color:"var(--wht)",marginBottom:6,textAlign:"center"}}/>
+        <div style={{fontSize:15,color:"var(--w50)",textAlign:"center",
+          marginBottom:24,lineHeight:1.5,maxWidth:320}}>
+          Your 3 free days are up. Unlock it once and it&rsquo;s yours — no subscription,
+          no account, works with no signal.
+        </div>
+
+        {mode === "buy" ? (
+          <>
+            <div style={{width:"100%",maxWidth:360,marginBottom:22}}>
+              {FEATURES.map(([title,sub])=>(
+                <div key={title} style={{display:"flex",gap:11,alignItems:"flex-start",
+                  padding:"10px 0",borderBottom:"1px solid var(--bdr)"}}>
+                  <BC c="✓" s={{fontSize:17,color:"var(--cop)",flexShrink:0,lineHeight:1.3}}/>
+                  <div>
+                    <BC c={title} s={{fontSize:17,fontWeight:800,color:"var(--wht)",
+                      display:"block",letterSpacing:".03em"}}/>
+                    <div style={{fontSize:13,color:"var(--w50)",marginTop:1}}>{sub}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={buy} disabled={busy} className="btn-fire"
+              style={{width:"100%",maxWidth:360,padding:"16px",borderRadius:"var(--r)",
+                border:"none",opacity:busy?.6:1,marginBottom:10}}>
+              {busy ? "Opening checkout…" : `Unlock — ${PRICE_LABEL} one time`}
+            </button>
+
+            <div style={{fontSize:13,color:"var(--w25)",marginBottom:16,textAlign:"center"}}>
+              Secure checkout by Stripe · no account needed
+            </div>
+
+            <button onClick={()=>{setMode("restore");setErr("");}}
+              style={{background:"none",border:"none",cursor:"pointer",
+                fontSize:14,color:"var(--w50)",textDecoration:"underline",
+                fontFamily:"inherit",minHeight:"unset"}}>
+              Already bought it? Restore purchase
+            </button>
+          </>
+        ) : (
+          <div style={{width:"100%",maxWidth:360}}>
+            <BC c="RESTORE PURCHASE" s={{fontSize:14,fontWeight:900,letterSpacing:".12em",
+              color:"var(--w50)",display:"block",marginBottom:10}}/>
+            <div style={{fontSize:14,color:"var(--w50)",marginBottom:12,lineHeight:1.5}}>
+              Enter the email you used at checkout. New phone, reinstall, cleared browser —
+              this brings it back.
+            </div>
+            <input value={email} onChange={e=>setEmail(e.target.value)}
+              type="email" inputMode="email" autoCapitalize="off" autoCorrect="off"
+              placeholder="you@example.com"
+              style={{width:"100%",padding:"13px 14px",borderRadius:"var(--r)",
+                background:"var(--blk3)",border:"1px solid var(--bdr2)",
+                color:"var(--wht)",fontSize:16,marginBottom:12,outline:"none"}}/>
+            <button onClick={restore} disabled={busy} className="btn-fire"
+              style={{width:"100%",padding:"15px",borderRadius:"var(--r)",
+                border:"none",opacity:busy?.6:1,marginBottom:12}}>
+              {busy ? "Checking…" : "Restore"}
+            </button>
+            <button onClick={()=>{setMode("buy");setErr("");}}
+              style={{background:"none",border:"none",cursor:"pointer",width:"100%",
+                fontSize:14,color:"var(--w50)",textDecoration:"underline",
+                fontFamily:"inherit",minHeight:"unset"}}>
+              Back
+            </button>
+          </div>
+        )}
+
+        {err && (
+          <div style={{marginTop:16,padding:"11px 13px",borderRadius:"var(--r)",
+            background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.35)",
+            maxWidth:360,fontSize:14,color:"rgba(255,190,190,.92)",lineHeight:1.45}}>
+            {err}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══ Trial countdown banner ═══ */
+function TrialBanner({ trial, onBuy }) {
+  const urgent = trial.daysLeft <= 1;
+  return (
+    <button onClick={onBuy} style={{
+      width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+      gap:10,padding:"8px 14px",cursor:"pointer",minHeight:"unset",border:"none",
+      background: urgent ? "rgba(239,68,68,.1)" : "rgba(201,121,60,.09)",
+      borderBottom:`1px solid ${urgent ? "rgba(239,68,68,.3)" : "rgba(201,121,60,.28)"}`,
+    }}>
+      <BC c={urgent
+              ? `TRIAL · ${trial.hoursLeft} HOUR${trial.hoursLeft===1?"":"S"} LEFT`
+              : `TRIAL · ${trial.daysLeft} DAYS LEFT`}
+        s={{fontSize:13,fontWeight:900,letterSpacing:".1em",
+          color: urgent ? "#ef4444" : "var(--cop)"}}/>
+      <BC c={`Unlock ${PRICE_LABEL} →`} s={{fontSize:14,fontWeight:800,
+        color: urgent ? "#ef4444" : "var(--cop)"}}/>
+    </button>
+  );
+}
+
 export default function App() {
   /* ── Screens: home | fittings | connect | reference */
   const [screen, setScreen] = useState("home");
+
+  /* ── License: 3-day trial, then $12 unlock ── */
+  const [licensed, setLicensed] = useState(hasLicense);
+  const [trial, setTrial]       = useState(trialInfo);
+  const [forcePay, setForcePay] = useState(false);
+
+  /* Returning from Stripe: ?session_id=... → verify and store the token */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get("session_id");
+    if (!sid || hasLicense()) return;
+    (async () => {
+      try {
+        const r = await fetch(`/api/verify?session_id=${encodeURIComponent(sid)}`);
+        const d = await r.json();
+        if (d.paid && d.token) {
+          lsSet(LS_LICENSE, d.token);
+          if (d.email) lsSet(LS_EMAIL, d.email);
+          setLicensed(true); setForcePay(false);
+        }
+      } catch { /* leave locked; they can restore by email */ }
+      window.history.replaceState({}, "", window.location.pathname);
+    })();
+  }, []);
+
+  /* Re-check the clock when the app comes back to the foreground */
+  useEffect(() => {
+    const tick = () => setTrial(trialInfo());
+    const id = setInterval(tick, 60000);
+    document.addEventListener("visibilitychange", tick);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", tick); };
+  }, []);
+
+  const locked = !licensed && (!trial.active || forcePay);
 
   /* ── First launch onboarding */
   const [showOnboard, setShowOnboard] = useState(() => {
@@ -369,9 +600,12 @@ export default function App() {
     el.textContent = CSS;
   }, []);
 
+  if (locked) return <PaywallScreen onUnlocked={()=>{setLicensed(true);setForcePay(false);}}/>;
+
   if (screen === "home") return (
     <>
-      <HomeScreen {...nav}/>
+      <HomeScreen {...nav} trial={!licensed ? trial : null}
+        onBuy={()=>setForcePay(true)}/>
       {showOnboard && (
         <div onClick={dismissOnboard} style={{
           position:"fixed",inset:0,background:"rgba(10,10,10,.97)",
@@ -1952,6 +2186,10 @@ const FITTING_MATERIALS = [
   "PVC (Schedule 80)",
   "SDR 35 Sewer — Solid",
   "SDR 35 Sewer — Perforated",
+  "Cast Iron",
+  "AC Pipe (Transite)",
+  "Copper DWV",
+  "CPVC (Schedule 80)",
 ];
 
 const NOMINAL_SIZES = [
@@ -1966,6 +2204,8 @@ const FITTING_TYPES = [
   { id:"elbow45",      label:"45° Elbow"          },
   { id:"elbow225",     label:"22½° Elbow"         },
   { id:"tee",          label:"Tee / Wye"          },
+  { id:"cross",        label:"Cross"              },
+  { id:"dblfix",       label:"Double Fixture"     },
   { id:"cap",          label:"Cap / Plug"         },
   { id:"union",        label:"Union"              },
   { id:"trap",         label:"P-Trap / J-Bend"   },
@@ -1976,7 +2216,208 @@ const FITTING_TYPES = [
   { id:"press",        label:"Press Fitting"      },
   { id:"transition",   label:"Transition"         },
   { id:"fernco",       label:"Fernco / Flex"      },
+  { id:"repair",       label:"Repair / Range"     },
+  { id:"slip",         label:"Slip / No-Stop"     },
+  { id:"compression",  label:"Compression"        },
+  { id:"telescopic",   label:"Telescopic"         },
+  { id:"hose",         label:"Hose Thread"        },
 ];
+
+/* Port count per fitting type — how many sizes the fitting actually has.
+   Couplings 2 · tees & wyes 3 · crosses & double fixtures 4. */
+const FITTING_PORTS = {
+  coupling:2, reducer:2, elbow90:2, elbow45:2, elbow225:2,
+  tee:3, cross:4, dblfix:4,
+  cap:1, union:2, trap:2, cleanout:1, flange:1, saddle:2,
+  street:2, press:2, transition:2, fernco:2,
+  repair:2, slip:2, compression:2, telescopic:2, hose:2,
+};
+
+/* Labels for each port, in order */
+const PORT_LABELS = {
+  coupling:   ["End 1","End 2"],
+  reducer:    ["Large end","Small end"],
+  elbow90:    ["End 1","End 2"],
+  elbow45:    ["End 1","End 2"],
+  elbow225:   ["End 1","End 2"],
+  tee:        ["Run A","Run B","Branch"],
+  cross:      ["Run A","Run B","Branch 1","Branch 2"],
+  dblfix:     ["Run A","Run B","Fixture 1","Fixture 2"],
+  cap:        ["Size"],
+  union:      ["End 1","End 2"],
+  trap:       ["Inlet","Outlet"],
+  cleanout:   ["Size"],
+  flange:     ["Size"],
+  saddle:     ["Main","Branch"],
+  street:     ["Spigot","Socket"],
+  press:      ["End 1","End 2"],
+  transition: ["This pipe","Other pipe"],
+  fernco:     ["End 1","End 2"],
+  repair:     ["Pipe OD","Pipe OD"],
+  slip:       ["End 1","End 2"],
+  telescopic: ["End 1","End 2"],
+  compression:["End 1","End 2"],
+  hose:       ["Pipe thread","Hose thread"],
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   HOME DEPOT VERIFIED PARTS
+   Every entry below was read off a live Home Depot product page.
+   hd = Internet # (also the URL path) · model = HD Model #
+   Anything not verified is absent — no invented numbers.
+════════════════════════════════════════════════════════════ */
+const HD = {
+  /* Copper slip / repair couplings — NO center stop, slides over the pipe */
+  "copper-repair-½\"": { hd:"100345672", model:"C601HD12",  brand:"Everbilt",
+    slug:"Everbilt-1-2-in-Copper-Pressure-Slip-Coupling-Fitting-C601HD12" },
+  "copper-repair-¾\"": { hd:"100346736", model:"C601HD34",  brand:"Everbilt", sku:"747386",
+    slug:"Everbilt-3-4-in-Copper-Pressure-Slip-Coupling-Fitting-C601HD34" },
+
+  /* Copper couplings WITH stop — standard, not a repair coupling */
+  "copper-coupling-¼\"": { hd:"204583730", model:"C600HD14", brand:"Everbilt", sku:"550249",
+    slug:"Everbilt-1-4-in-Copper-Pressure-Cup-x-Cup-Coupling-Fitting-with-Stop-C600HD14" },
+  "copper-coupling-½\"": { hd:"100342365", model:"C600HD12", brand:"Everbilt",
+    slug:"Everbilt-1-2-in-Copper-Pressure-Cup-x-Cup-Coupling-Fitting-with-Stop-C600HD12" },
+  "copper-coupling-¾\"": { hd:"100343588", model:"C600HD34", brand:"Everbilt", sku:"187356",
+    slug:"Everbilt-3-4-in-Copper-Pressure-Cup-x-Cup-Coupling-with-Stop-Fitting-C600HD34" },
+  "copper-coupling-1½\"": { hd:"100345557", model:"C600HD112", brand:"Everbilt",
+    slug:"Everbilt-1-1-2-in-Copper-Pressure-C-x-C-Coupling-with-Stop-C600" },
+
+  /* Copper press repair couplings */
+  "copper-pressrepair-¾\"": { hd:"203460413", model:"PC60134", brand:"Nibco",
+    slug:"NIBCO-3-4-in-Copper-Press-x-Press-Pressure-Repair-Coupling-with-No-Stop-PC60134" },
+
+  /* Charlotte Pipe cast iron no-hub — verified at Home Depot */
+  "ci-santee-3\"":  { hd:"202535702", model:"NHTY3",  brand:"Charlotte Pipe",
+    slug:"Charlotte-Pipe-3-in-Cast-Iron-DWV-No-Hub-Sanitary-Tee-NHTY3" },
+  "ci-tapsantee-1½\"": { hd:"202534991", model:"NHTTY1", brand:"Charlotte Pipe",
+    slug:"Charlotte-Pipe-1-1-2-in-Cast-Iron-DWV-No-Hub-Tapped-Sanitary-Tee-NHTTY1" },
+
+  /* Charlotte Pipe PVC DWV — verified at Home Depot */
+  "pvcdwv-combo-2\"": { hd:"203396237", model:"PVC005010800HD", brand:"Charlotte Pipe", sku:"905573",
+    slug:"Charlotte-Pipe-2-in-DWV-PVC-Comb-Wye-and-1-8-Bend-Fitting-PVC005010800HD" },
+  "pvcdwv-combo-3\"": { hd:"203396239", model:"PVC005011000HD", brand:"Charlotte Pipe",
+    slug:"Charlotte-Pipe-3-in-x-3-in-x-3-in-DWV-PVC-Comb-Wye-and-1-8-Bend-PVC005011000HD" },
+
+  /* NIBCO PVC DWV — verified at Home Depot. Part number encodes port sizes:
+     C4811HD332 = sanitary tee 3×3×2 · 112 = 1½" */
+  "nibco-pvcdwv-santee-3\"": { hd:"100342376", model:"C4811HD332", brand:"Nibco",
+    slug:"NIBCO-3-in-x-3-in-x-2-in-PVC-DWV-All-Hub-Sanitary-Tee-Fitting-C4811HD332" },
+  "nibco-pvcdwv-santee-2\"": { hd:"100345173", model:"C4811HD22112", brand:"Nibco",
+    slug:"NIBCO-2-in-x-2-in-x-1-1-2-in-PVC-DWV-All-Hub-Sanitary-Reducing-Tee-C4811HD22112" },
+  "nibco-pvcdwv-dblsantee-2\"": { hd:"100348298", model:"C4835HD2", brand:"Nibco",
+    slug:"NIBCO-2-in-PVC-DWV-All-Hub-Double-Sanitary-Tee-C4835HD2" },
+  "nibco-pvcdwv-dblsantee-3\"": { hd:"205799569", model:"C4835HD3322", brand:"Nibco", sku:"922719",
+    slug:"NIBCO-3-in-x-3-in-x-2-in-x-2-in-PVC-DWV-All-Hub-Double-Sanitary-Tee-C4835HD3322" },
+
+  /* NIBCO ABS DWV — verified at Home Depot */
+  "nibco-absdwv-santee-2\"": { hd:"100343490", model:"C5811HD22112", brand:"Nibco",
+    slug:"NIBCO-2-in-x-2-in-x-1-1-2-in-ABS-DWV-All-Hub-Sanitary-Tee-C5811HD22112" },
+  "nibco-absdwv-lrtee-2\"": { hd:"100344794", model:"C5812LHD2", brand:"Nibco",
+    slug:"NIBCO-2-in-ABS-DWV-All-Hub-Long-Radius-Sanitary-Tee-C5812LHD2" },
+  "nibco-absdwv-dblfix-2\"": { hd:"100210106", model:"C5835BHD2", brand:"Nibco",
+    slug:"NIBCO-2-in-ABS-DWV-All-Hub-Double-Fixture-Sanitary-Tee-C5835BHD2" },
+
+  /* Dura PVC — verified */
+  "dura-coupling-½\"": { hd:"100342935", model:"C429-005", brand:"Dura",
+    slug:"Dura-Corp-1-2-in-Schedule-40-PVC-Coupling-C429-005" },
+  "dura-coupling-1\"":  { hd:"100343722", model:"C429-010", brand:"Dura",
+    slug:"DURA-1-in-Schedule-40-PVC-Coupling-Fitting-C429-010" },
+  "dura-threaded-½\"": { hd:"100344953", model:"C430-005W", brand:"Dura",
+    slug:"Dura-Corp-1-2-in-Schedule-40-PVC-Threaded-Coupling-C430-005W" },
+
+  /* PVC compression coupling */
+  "pvc-compression-¾\"": { hd:"206667869", model:"511-43-34-34H", brand:"Homewerks",
+    slug:"Homewerks-Worldwide-3-4-in-PVC-Compression-Coupling-511-43-34-34H" },
+};
+
+const hdUrl = (e) => `https://www.homedepot.com/p/${e.slug}/${e.hd}`;
+
+/* Build a fitting record from a verified HD entry */
+function hdPart(key, type, desc, search) {
+  const e = HD[key];
+  if (!e) return null;
+  return { type, desc, brand:e.brand, part:e.model, search,
+           hdUrl:hdUrl(e), hd:e.hd, sku:e.sku, verified:true };
+}
+
+
+/* ════════════════════════════════════════════════════════════
+   JCM UNIVERSAL CLAMP COUPLINGS — heavy duty repair / range couplings
+   Part number format is JCM's own, from their catalog:
+       model – pipe OD (4 digits, hundredths) – band width
+       e.g. 6.90" OD cast iron, 6" band  →  101-0690-6
+   OD comes straight from the app's OD table, so the number is derived,
+   not guessed. Band width varies by application — confirm when ordering.
+════════════════════════════════════════════════════════════ */
+const JCM_MODELS = [
+  { model:"101", name:"Single Band Universal Clamp Coupling",
+    note:"Standard lug. Low-alloy steel band." },
+  { model:"171", name:"Single Band, Removable Lug",
+    note:"Removable lug for tight excavations and rockbound soil." },
+  { model:"102", name:"Extended Range Multi-Band Coupling",
+    note:'Built for AC and cast iron 4"–12". Extra range — best on 10" and larger.' },
+  { model:"172", name:"Extended Range, Removable Lug",
+    note:"Extended range with removable lug for restricted access." },
+  { model:"131", name:"All Stainless Single Band",
+    note:"All 304 stainless — hot soils and corrosive ground." },
+  { model:"132", name:"All Stainless Extended Range",
+    note:'All stainless, AC and cast iron. 6 clamps cover 4"–12".' },
+  { model:"136", name:"All Stainless Heavy Duty Repair Clamp",
+    note:"Heavy duty all stainless. Meets ANSI/AWWA C230." },
+];
+
+/* pipe OD → JCM 4-digit code: 6.90 → 0690 */
+const jcmOD = (od) => String(Math.round(od * 100)).padStart(4, "0");
+
+/* Look up the OD this material/size actually is */
+function odFor(materialMatch, size) {
+  const row = OD_TABLE.find(e =>
+    e.nominal === size && e.material.toLowerCase().includes(materialMatch));
+  return row ? row.od : null;
+}
+
+function jcmFittings(materialMatch, size, pipeLabel) {
+  const od = odFor(materialMatch, size);
+  if (!od) return [];
+  const code = jcmOD(od);
+  return JCM_MODELS.map(m => ({
+    type:"repair",
+    desc:`${size} ${pipeLabel} — JCM ${m.model} ${m.name}`,
+    brand:"JCM",
+    part:`${m.model}-${code}-6`,
+    search:`JCM ${m.model} universal clamp coupling ${od}" OD ${pipeLabel}`,
+    note:`${m.note} · Pipe OD ${od}" → code ${code}. 6" band shown — confirm width. Torque 60–85 ft-lb standard; JCM rated past 100 ft-lb on ⅝" bolts.`,
+    verified:true,
+  }));
+}
+
+/* ═══ TYLER PIPE cast iron — verified numbers only ═══
+   Tyler uses 6-digit item numbers. Blanks show a dash and rely on the
+   search link; nothing here is invented. */
+const TYLER = {
+  '2"': { wye:"008217" },
+};
+
+/* ═══ DURA PVC — verified part numbers only ═══
+   sc  = SC29 compression coupling · frc = flexible repair coupling
+   Only sizes confirmed against a live listing appear here. */
+const DURA = {
+  '¾"': { frc:"FRC-007" },
+  '1"': { frc:"FRC-010" },
+  '4"': { sc:"SC29-040" },
+};
+
+/* ═══ PASCO galvanized IPS compression couplings (verified) ═══ */
+const PASCO_COMPRESSION = {
+  '½"':  { part:"2908", len:'3-3/4"' },
+  '¾"':  { part:"2909", len:"long"   },
+  '1"':  { part:"2910", len:'4-1/4"' },
+  '1¼"': { part:"2911", len:'4-3/4"' },
+  '1½"': { part:"2912", len:'5"'     },
+  '2"':  { part:"2913", len:'5-3/8"' },
+};
 
 /* Core fitting data — material + size → fittings */
 function getFittings(material, size) {
@@ -2024,6 +2465,15 @@ function getFittings(material, size) {
       b.elbow90   && { type:"elbow90",   desc:`${s} Push-Connect 90° Elbow`,      brand:"SharkBite", part:b.elbow90,   search:`SharkBite ${s} push connect 90 elbow` },
       b.tee       && { type:"tee",       desc:`${s} Push-Connect Tee`,            brand:"SharkBite", part:b.tee,       search:`SharkBite ${s} push connect tee` },
       b.transition&& { type:"transition",desc:`${s} Copper × PEX Transition`,     brand:"SharkBite", part:b.transition,search:`SharkBite ${s} copper PEX transition` },
+      hdPart(`copper-repair-${s}`, "slip",
+        `${s} Copper Slip Coupling (no stop)`,
+        `${s} copper slip coupling no stop`),
+      hdPart(`copper-coupling-${s}`, "coupling",
+        `${s} Copper Coupling (with stop)`,
+        `${s} copper coupling with stop`),
+      hdPart(`copper-pressrepair-${s}`, "slip",
+        `${s} Copper Press Slip Coupling (no stop)`,
+        `${s} copper press repair coupling no stop`),
                      { type:"fernco",    desc:`${s} Fernco Flex Coupling`,        brand:"Fernco",    part:`1056-${sz}`,search:`Fernco ${s} flexible coupling` },
                      { type:"saddle",    desc:`${s} Copper Saddle Tee`,           brand:"Sioux Chief",part:`SC-${sz}`, search:`${s} copper saddle tee wet tap` },
     ].filter(Boolean);
@@ -2062,6 +2512,24 @@ function getFittings(material, size) {
                    { type:"street",    desc:`${s} PVC Sch 40 Street 90° Elbow`, brand:"Charlotte Pipe", part:`PVC 06001 ${sz}`, search:`Charlotte Pipe ${s} PVC schedule 40 street 90 elbow` },
                    { type:"street",    desc:`${s} PVC Sch 40 Street 45° Elbow`, brand:"Charlotte Pipe", part:`PVC 07001 ${sz}`, search:`Charlotte Pipe ${s} PVC schedule 40 street 45 elbow` },
                    { type:"saddle",    desc:`${s} PVC Saddle Tee`,              brand:"Sioux Chief",    part:`SC-PVC-${sz}`,   search:`${s} PVC saddle tee wet tap` },
+      hdPart(`pvc-compression-${s}`, "compression",
+        `${s} PVC Compression Coupling`,
+        `${s} PVC compression coupling repair`),
+      hdPart(`dura-coupling-${s}`, "coupling",
+        `${s} PVC Sch 40 Coupling`,
+        `Dura ${s} schedule 40 PVC coupling`),
+      ...(DURA[s]?.sc ? [{
+        type:"compression", desc:`${s} Dura PVC Compression Coupling`,
+        brand:"Dura", part:DURA[s].sc,
+        search:`Dura ${DURA[s].sc} ${s} PVC compression coupling schedule 40`,
+        note:"Compression repair coupling — no cement, no cutting back the line.",
+        verified:true }] : []),
+      ...(DURA[s]?.frc ? [{
+        type:"telescopic", desc:`${s} Dura Flexible Repair Coupling`,
+        brand:"Dura", part:DURA[s].frc,
+        search:`Dura ${DURA[s].frc} ${s} PVC flexible repair coupling slip joint`,
+        note:"Flexible slip-joint repair coupling. Non-potable — irrigation and sprinkler repair.",
+        verified:true }] : []),
                    { type:"fernco",    desc:`${s} Fernco PVC Flex Coupling`,    brand:"Fernco",         part:`1056-${sz}`,     search:`Fernco ${s} PVC flexible coupling` },
                    { type:"transition",desc:`${s} PVC × ABS Transition`,        brand:"Charlotte Pipe", part:`PVC TRANS ${sz}`, search:`${s} PVC to ABS transition coupling` },
     ].filter(Boolean);
@@ -2191,6 +2659,14 @@ function getFittings(material, size) {
       { type:"street",    desc:`${s} Galvanized Street Elbow`,   brand:"Anvil", part:`0308-${sz}`, search:`${s} galvanized steel street elbow` },
       { type:"fernco",    desc:`${s} Fernco Flex Coupling`,      brand:"Fernco",part:`1056-${sz}`, search:`Fernco ${s} galvanized flexible coupling` },
       { type:"transition",desc:`${s} Galvanized × PEX Adapter`,  brand:"Watts", part:`LF3171-${sz}`,search:`${s} galvanized to PEX adapter` },
+      ...(PASCO_COMPRESSION[s] ? [{
+        type:"compression",
+        desc:`${s} Galvanized Compression Coupling (long)`,
+        brand:"Pasco", part:PASCO_COMPRESSION[s].part,
+        search:`Pasco ${PASCO_COMPRESSION[s].part} ${s} galvanized compression coupling long IPS`,
+        note:`Long pattern, ${PASCO_COMPRESSION[s].len}. Galvanized IPS — no threading, no welding. Restrain pipe after install.`,
+        verified:true,
+      }] : []),
     ];
   }
 
@@ -2245,7 +2721,11 @@ function getFittings(material, size) {
       { type:"elbow225",  desc:`${s} PVC DWV 22½° Elbow`,             brand:"Charlotte Pipe", part:`PVC 06801 ${sz}`, search:`Charlotte Pipe ${s} PVC DWV 22.5 degree elbow` },
       { type:"tee",       desc:`${s} PVC DWV Sanitary Tee`,            brand:"Charlotte Pipe", part:ch.tee||`PVC 07101 ${sz}`,    search:`Charlotte Pipe ${s} PVC DWV sanitary tee` },
       { type:"tee",       desc:`${s} PVC DWV Wye`,                     brand:"Charlotte Pipe", part:`PVC DWV WYE ${sz}`,          search:`Charlotte Pipe ${s} PVC DWV wye` },
-      { type:"tee",       desc:`${s} PVC DWV Combo Wye + ⅛ Bend`,     brand:"Charlotte Pipe", part:`PVC DWV COMBO ${sz}`,        search:`Charlotte Pipe ${s} PVC DWV combination wye` },
+      hdPart(`pvcdwv-combo-${s}`, "tee",
+        `${s} PVC DWV Combo Wye + ⅛ Bend`,
+        `Charlotte Pipe ${s} PVC DWV combination wye and 1/8 bend`)
+        || { type:"tee", desc:`${s} PVC DWV Combo Wye + ⅛ Bend`, brand:"Charlotte Pipe",
+             part:"—", search:`Charlotte Pipe ${s} PVC DWV combination wye 1/8 bend` },
       { type:"cap",       desc:`${s} PVC DWV Cap`,                     brand:"Charlotte Pipe", part:ch.cap||`PVC 07601 ${sz}`,    search:`Charlotte Pipe ${s} PVC DWV cap` },
       { type:"cap",       desc:`${s} PVC DWV Plug`,                    brand:"Charlotte Pipe", part:`PVC DWV PLUG ${sz}`,         search:`Charlotte Pipe ${s} PVC DWV plug` },
       { type:"cleanout",  desc:`${s} PVC DWV Cleanout Adapter`,        brand:"Charlotte Pipe", part:`PVC DWV CO ADP ${sz}`,       search:`Charlotte Pipe ${s} PVC DWV cleanout adapter` },
@@ -2304,6 +2784,146 @@ function getFittings(material, size) {
     ];
   }
 
+  /* ── COPPER DWV — thin wall, drainage only ── */
+  if(m === "Copper DWV") {
+    const DWV_SIZES = ['1¼"','1½"','2"','3"','4"','6"','8"'];
+    if(!DWV_SIZES.includes(s)) return [
+      { type:"coupling", desc:`Copper DWV not made in ${s}`, brand:"—", part:"—",
+        search:`copper DWV pipe ${s}`,
+        note:'Copper DWV runs 1¼" through 8". For supply sizes use Copper (pressure).' }
+    ];
+    const dwv = (type, name, extra) => ({
+      type, desc:`${s} Copper DWV ${name}`, brand:"Nibco / Mueller", part:"—",
+      search:`${s} copper DWV ${name.toLowerCase()} solder fitting ASTM B306`,
+      note:"Copper DWV is thin-wall drainage only — NOT rated for pressure. "
+         + "ASTM B306 tube, ASME B16.23 fittings. Supply-house item; Home Depot does not stock it."
+         + (extra ? " " + extra : ""),
+    });
+    return [
+      dwv("coupling", "Coupling"),
+      dwv("elbow90",  "¼ Bend (90°)"),
+      dwv("elbow45",  "⅛ Bend (45°)"),
+      dwv("elbow225", "1/16 Bend (22½°)"),
+      dwv("tee",      "Sanitary Tee"),
+      dwv("tee",      "Wye"),
+      dwv("cross",    "Sanitary Cross"),
+      dwv("dblfix",   "Double Fixture Fitting"),
+      dwv("trap",     "P-Trap"),
+      dwv("cleanout", "Cleanout Adapter"),
+      dwv("flange",   "Closet Flange"),
+      dwv("reducer",  "Reducer / Increaser"),
+      dwv("cap",      "Cap"),
+      dwv("transition","× Cast Iron Adapter",
+        "Solder DWV to a spigot adapter, then shielded coupling to cast iron."),
+      { type:"fernco", desc:`${s} Copper DWV × Plastic Coupling`, brand:"Fernco",
+        part:`1056-${sz}`, search:`Fernco ${s} copper DWV to PVC ABS flexible coupling`,
+        note:"Copper DWV OD matches copper pressure at the same nominal size." },
+    ];
+  }
+
+  /* ── CPVC SCHEDULE 80 — grey, industrial ── */
+  if(m === "CPVC (Schedule 80)") {
+    const c80 = (type, name) => ({
+      type, desc:`${s} CPVC Sch 80 ${name}`, brand:"Spears / Charlotte", part:"—",
+      search:`${s} CPVC schedule 80 ${name.toLowerCase()} grey ASTM F441`,
+      note:"Grey Sch 80 CPVC — ASTM F441 pipe, F439 fittings. Use CPVC cement and "
+         + "CPVC primer only; standard purple PVC primer is not compatible. "
+         + "Thicker wall than Sch 40 — same OD, smaller ID, higher pressure rating.",
+    });
+    return [
+      c80("coupling","Coupling"),
+      c80("reducer", "Reducer Bushing"),
+      c80("elbow90", "90° Elbow"),
+      c80("elbow45", "45° Elbow"),
+      c80("tee",     "Tee"),
+      c80("cross",   "Cross"),
+      c80("cap",     "Cap"),
+      c80("union",   "Union"),
+      c80("flange",  "Flange"),
+      c80("street",  "Street 90° Elbow"),
+      c80("transition","× CPVC Sch 40 Adapter"),
+      c80("transition","× Metal Threaded Adapter"),
+    ];
+  }
+
+  /* ── CAST IRON ── */
+  if(m === "Cast Iron") {
+    const jcm = jcmFittings("cast iron", s, "Cast Iron");
+    if(!jcm.length) return [
+      { type:"repair", desc:`Cast iron OD not in table for ${s}`, brand:"—", part:"—",
+        search:`cast iron pipe ${s} repair coupling`,
+        note:'Cast iron ODs on file: 2" (2.300), 3" (3.300), 4" (4.300).' }
+    ];
+    const T = TYLER[s] || {};
+    const CI_NOTE = "ASTM A888 / CISPI 301. Join with CISPI 310 shielded couplings — "
+                  + "unshielded couplings void the manufacturer warranty.";
+    const ci = (type, name, extra, hdKey) => {
+      /* Verified Charlotte part at Home Depot wins; Tyler next; otherwise search only */
+      const e = hdKey && HD[hdKey];
+      if (e) return {
+        type, desc:`${s} Cast Iron No-Hub ${name}`, brand:e.brand,
+        part:e.model, hdUrl:hdUrl(e), hd:e.hd, sku:e.sku, verified:true,
+        search:`Charlotte Pipe ${s} no-hub cast iron ${name.toLowerCase()}`,
+        note:CI_NOTE,
+      };
+      return {
+        type, desc:`${s} Cast Iron No-Hub ${name}`,
+        brand: T[extra] ? "Tyler Pipe" : "Charlotte / Tyler",
+        part: T[extra] || "—",
+        search:`${s} no-hub cast iron ${name.toLowerCase()} CISPI 301`,
+        note:CI_NOTE,
+        verified: !!T[extra],
+      };
+    };
+    return [
+      ...jcm,
+      ci("elbow90",  "¼ Bend (90°)",        "qbend"),
+      ci("elbow45",  "⅛ Bend (45°)",        "ebend"),
+      ci("elbow225", "1/16 Bend (22½°)",    "sbend"),
+      ci("tee",      "Sanitary Tee",          "santee",   `ci-santee-${s}`),
+      ci("tee",      "Tapped Sanitary Tee",   "tapsantee",`ci-tapsantee-${s}`),
+      ci("tee",      "Wye Branch",            "wye"),
+      ci("tee",      "Combination Wye + ⅛ Bend", "combo"),
+      ci("cross",    "Sanitary Cross",        "cross"),
+      ci("dblfix",   "Double Fixture Fitting","dblfix"),
+      ci("cleanout", "Cleanout Tee",          "cleanout"),
+      ci("flange",   "Closet Flange",         "flange"),
+      ci("reducer",  "Reducer",               "reducer"),
+      ci("cap",      "Plug / Cap",            "cap"),
+      ci("trap",     "P-Trap",                "trap"),
+      { type:"fernco", desc:`${s} No-Hub Shielded Coupling (CISPI 310)`,
+        brand:"Mission", part:`MC-${sz}`,
+        search:`Mission no-hub shielded band coupling ${s} cast iron CISPI 310`,
+        note:'Required by Tyler for hubless joints. Torque 60 in-lb (2"), 80 in-lb (3"–4").' },
+      { type:"fernco", desc:`${s} Heavy-Duty Shielded Coupling`,
+        brand:"Fernco", part:`GS-${sz}`,
+        search:`Fernco shielded coupling ${s} cast iron no hub`,
+        note:"4-band shielded coupling for underground and high-load applications." },
+      { type:"transition", desc:`${s} Cast Iron × PVC/ABS Coupling`,
+        brand:"Fernco", part:`1056-${sz}`,
+        search:`Fernco ${s} cast iron to PVC transition coupling`,
+        note:'No-hub cast iron OD differs from hub — Tyler lists 4" no-hub at 4.38", '
+           + 'hub pipe at 4.30". Verify OD before sizing the coupling.' },
+    ];
+  }
+
+  /* ── AC PIPE (TRANSITE) — HAZMAT ── */
+  if(m === "AC Pipe (Transite)") {
+    const jcm = jcmFittings("ac pipe", s, "AC Pipe");
+    if(!jcm.length) return [
+      { type:"repair", desc:`AC pipe OD not in table for ${s}`, brand:"—", part:"—",
+        search:`asbestos cement pipe ${s} repair coupling`,
+        note:'AC ODs on file: 4" (4.800), 6" (7.100), 8" (9.050), 10" (11.350), 12" (13.500).' }
+    ];
+    return [
+      ...jcm,
+      { type:"transition", desc:`${s} AC Pipe Fitting Restrainer`, brand:"JCM", part:"630",
+        search:`JCM 630 asbestos cement pipe restrainer ${s}`,
+        note:'Anchors fittings, hydrants, valves and meters to 4"–16" AC pipe. Split design for retrofit.',
+        verified:true },
+    ];
+  }
+
   return [];
 }
 
@@ -2322,6 +2942,16 @@ const BRAND_COLORS = {
   "Charlotte Pipe SDR": "#005bac",
   "Diamond Plastics":  "#4a7c59",
   "Advanced Drainage Systems": "#2d6a2d",
+  "JCM":            "#1b4f9c",
+  "Pasco":          "#6b7280",
+  "Mission":        "#8b1a1a",
+  "Everbilt":       "#f96302",
+  "Homewerks":      "#0a7a3d",
+  "Nibco / Mueller":  "#003087",
+  "Spears / Charlotte":"#005bac",
+  "Charlotte / Tyler": "#5a5a5a",
+  "Tyler Pipe":     "#8a6d3b",
+  "Dura":           "#1b7a8c",
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -2329,34 +2959,46 @@ const BRAND_COLORS = {
 ═══════════════════════════════════════════════════════════ */
 function FittingsScreen({screen, navigate}) {
   const [material,   setMaterial]   = useState("Copper");
-  const [size,       setSize]       = useState('¾"');  // run A (main run)
-  const [sizeB,      setSizeB]      = useState("");    // run B (second run for tees) or outlet
+  const [sizes,      setSizes]      = useState(['¾"','¾"','¾"','¾"']);
   const [typeFilter, setTypeFilter] = useState("all");
 
-  // Types that need a second size
-  const NEEDS_SIZEB = ["reducer","tee","transition","fernco","saddle"];
-  const showSizeB = typeFilter === "all" || NEEDS_SIZEB.includes(typeFilter);
+  /* How many ports the selected fitting has. "All" shows one size only,
+     since port count is a property of the fitting type. */
+  const portCount = typeFilter === "all" ? 1 : (FITTING_PORTS[typeFilter] || 1);
+  const labels    = PORT_LABELS[typeFilter] || ["Size"];
 
-  // Labels
-  const sizeALabel = "Main size";
-  const sizeBLabel =
-    typeFilter === "tee"        ? "Run B"      :
-    typeFilter === "reducer"    ? "Outlet size" :
-    typeFilter === "saddle"     ? "Branch size" :
-    typeFilter === "transition" ? "Other pipe"  :
-    typeFilter === "fernco"     ? "Other end"   :
-    "2nd size";
+  const setPort = (i, val) => setSizes(prev => {
+    const next = [...prev];
+    next[i] = val;
+    return next;
+  });
+  /* Setting the main size pulls the other ports along unless already reduced */
+  const setMain = (val) => setSizes(prev => {
+    const next = [...prev];
+    next.forEach((v,i) => { if (i === 0 || v === prev[0]) next[i] = val; });
+    return next;
+  });
 
-  const baseFittings = getFittings(material, size);
-  // When a second size is chosen, append fittings from that size filtered to
-  // reducer/transition/tee types so the user sees all relevant options
-  const bFittings = sizeB && sizeB !== size
-    ? getFittings(material, sizeB)
-        .filter(f => NEEDS_SIZEB.includes(f.type))
-        .map(f => ({...f, desc: f.desc + " [×" + sizeB + "]", _sizeb: sizeB}))
-    : [];
-  const fittings = [...baseFittings, ...bFittings];
-  const filtered  = typeFilter === "all"
+  const active   = sizes.slice(0, portCount);
+  const reducing = new Set(active).size > 1;
+  const sizeSpec = active.join(" × ");
+
+  /* Base list comes from the main size. For multi-port fittings the chosen
+     spec is folded into the description and the retailer search string, so
+     the link finds the right reducing part. */
+  const raw = getFittings(material, sizes[0]);
+  const fittings = raw.map(f => {
+    const ports = FITTING_PORTS[f.type] || 1;
+    if (ports < 2 || !reducing || typeFilter === "all") return f;
+    const spec = sizes.slice(0, ports).join(" × ");
+    return {
+      ...f,
+      desc: f.desc.replace(sizes[0], spec),
+      search: `${spec} ${f.search.replace(sizes[0] + " ", "")}`.trim(),
+      _spec: spec,
+    };
+  });
+  const filtered = typeFilter === "all"
     ? fittings
     : fittings.filter(f => f.type === typeFilter);
 
@@ -2390,61 +3032,60 @@ function FittingsScreen({screen, navigate}) {
           ))}
         </div>
 
-        {/* Run / main size */}
-        <BC c={sizeALabel} s={{fontSize:13,fontWeight:800,color:"var(--w50)",
-          letterSpacing:".08em",textTransform:"uppercase",display:"block",marginBottom:5}}/>
-        <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
-          {NOMINAL_SIZES.map(sz=>(
-            <button key={sz} onClick={()=>{setSize(sz);if(sizeB===sz)setSizeB("");}} style={{
-              padding:"7px 11px",borderRadius:4,fontSize:15,cursor:"pointer",
-              fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,
-              background:size===sz?"var(--grn)":"var(--blk3)",
-              color:size===sz?"#0c0c0c":"var(--w50)",
-              border:"1px solid " + (size===sz?"var(--grn)":"var(--bdr2)"),
-              transition:"all .12s",minHeight:"unset",
-            }}>{sz}</button>
-          ))}
-        </div>
+        {/* Size ports — one row per port on the selected fitting */}
+        {Array.from({length: portCount}).map((_, i) => {
+          const isMain   = i === 0;
+          const label    = labels[i] || `Size ${i+1}`;
+          const val      = sizes[i];
+          const isReduced= !isMain && val !== sizes[0];
+          const accent   = isMain ? "var(--grn)" : "var(--yel)";
+          return (
+            <div key={i} style={{marginBottom:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                <BC c={label} s={{fontSize:14,fontWeight:800,
+                  color:isReduced?"var(--yel)":"var(--w50)",
+                  letterSpacing:".1em",textTransform:"uppercase"}}/>
+                {isReduced && (
+                  <button onClick={()=>setPort(i, sizes[0])} style={{
+                    fontSize:12,padding:"2px 8px",borderRadius:10,cursor:"pointer",
+                    background:"rgba(245,197,24,.15)",color:"var(--yel)",
+                    border:"1px solid rgba(245,197,24,.3)",minHeight:"unset",
+                    fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
+                  }}>✕ match run</button>
+                )}
+              </div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {NOMINAL_SIZES.map(sz=>{
+                  const on = val === sz;
+                  return (
+                    <button key={sz}
+                      onClick={()=> isMain ? setMain(sz) : setPort(i, sz)}
+                      style={{
+                        padding:"10px 14px",borderRadius:5,fontSize:18,cursor:"pointer",
+                        fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,
+                        background:on?accent:"var(--blk3)",
+                        color:on?"#0c0c0c":"var(--w50)",
+                        border:"1px solid " + (on?accent:"var(--bdr2)"),
+                        transition:"all .12s",minHeight:"unset",minWidth:46,
+                      }}>{sz}</button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
 
-        {/* 2nd size — branch / outlet / other end (shown when relevant) */}
-        {showSizeB && (
-          <div style={{marginBottom:10}}>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
-              <BC c={sizeBLabel} s={{fontSize:13,fontWeight:800,
-                color:sizeB?"var(--yel)":"var(--w25)",
-                letterSpacing:".08em",textTransform:"uppercase"}}/>
-              {sizeB && (
-                <button onClick={()=>setSizeB("")} style={{
-                  fontSize:12,padding:"2px 7px",borderRadius:10,cursor:"pointer",
-                  background:"rgba(245,197,24,.15)",color:"var(--yel)",
-                  border:"1px solid rgba(245,197,24,.3)",minHeight:"unset",
-                  fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
-                }}>✕ clear</button>
-              )}
-            </div>
-            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-              <button onClick={()=>setSizeB(size)} style={{
-                padding:"5px 9px",borderRadius:4,fontSize:13,cursor:"pointer",
-                fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
-                background:(!sizeB||sizeB===size)?"rgba(245,197,24,.2)":"var(--blk3)",
-                color:(!sizeB||sizeB===size)?"var(--yel)":"var(--w25)",
-                border:"1px solid " + ((!sizeB||sizeB===size)?"rgba(245,197,24,.4)":"var(--bdr)"),
-                minHeight:"unset",
-              }}>SAME</button>
-              {NOMINAL_SIZES.filter(sz=>sz!==size).map(sz=>(
-                <button key={sz} onClick={()=>setSizeB(sz)} style={{
-                  padding:"5px 9px",borderRadius:4,fontSize:13,cursor:"pointer",
-                  fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
-                  background:sizeB===sz?"var(--yel)":"var(--blk3)",
-                  color:sizeB===sz?"#0c0c0c":"var(--w25)",
-                  border:"1px solid " + (sizeB===sz?"var(--yel)":"var(--bdr)"),
-                  transition:"all .12s",minHeight:"unset",
-                }}>{sz}</button>
-              ))}
-            </div>
+        {/* Spec readout */}
+        {portCount > 1 && (
+          <div style={{display:"flex",alignItems:"center",gap:10,
+            padding:"9px 12px",marginBottom:10,borderRadius:"var(--r)",
+            background:reducing?"rgba(245,197,24,.08)":"var(--blk3)",
+            border:`1px solid ${reducing?"rgba(245,197,24,.3)":"var(--bdr)"}`}}>
+            <BC c={reducing?"REDUCING":"STRAIGHT"} s={{fontSize:13,fontWeight:900,
+              letterSpacing:".1em",color:reducing?"var(--yel)":"var(--w25)"}}/>
+            <Mono c={sizeSpec} s={{fontSize:17,fontWeight:700,color:"var(--wht)"}}/>
           </div>
         )}
-
 
       </div>
 
@@ -2548,6 +3189,14 @@ function FittingCard({fitting, retailers, sponsored}) {
               fontWeight:800,letterSpacing:".06em",flexShrink:0}}>
               {fitting.brand}
             </span>
+            {fitting.verified&&(
+              <span style={{fontSize:13,padding:"2px 7px",borderRadius:2,
+                background:"rgba(34,197,94,.12)",color:"var(--grn)",
+                border:"1px solid rgba(34,197,94,.3)",
+                fontFamily:"'Barlow Condensed',sans-serif",
+                fontWeight:800,letterSpacing:".06em"}}>
+                {fitting.hdUrl ? "✓ HD VERIFIED" : "✓ VERIFIED"}</span>
+            )}
             {isSponsored&&(
               <span style={{fontSize:14,padding:"2px 6px",borderRadius:2,
                 background:"rgba(201,121,60,.15)",color:"var(--cop)",
@@ -2558,6 +3207,10 @@ function FittingCard({fitting, retailers, sponsored}) {
           <BC c={fitting.desc} s={{fontSize:16,fontWeight:800,
             color:"var(--wht)",display:"block",marginBottom:2}}/>
           <Mono c={fitting.part} s={{fontSize:14,color:"var(--w50)"}}/>
+          {fitting.hd && (
+            <Mono c={`  ·  HD #${fitting.hd}${fitting.sku ? "  ·  SKU " + fitting.sku : ""}`}
+              s={{fontSize:13,color:"var(--w25)"}}/>
+          )}
         </div>
         <BC c={open?"▲":"▼"} s={{fontSize:15,color:"var(--w50)",flexShrink:0}}/>
       </button>
@@ -2565,13 +3218,30 @@ function FittingCard({fitting, retailers, sponsored}) {
       {/* Retailer links — expanded */}
       {open&&(
         <div style={{borderTop:"1px solid var(--bdr)",padding:"12px 14px"}}>
+          {fitting.note && (() => {
+            const n = fitting.note;
+            const hazard = /ASBESTOS|NOT rated|NOT pressure|void the manufacturer|never|Never/.test(n);
+            return (
+              <div style={{marginBottom:12,padding:"10px 12px",borderRadius:"var(--r)",
+                background: hazard ? "rgba(239,68,68,.09)" : "var(--blk3)",
+                border: `1px solid ${hazard ? "rgba(239,68,68,.35)" : "var(--bdr)"}`,
+                borderLeft: `3px solid ${hazard ? "#ef4444" : "var(--cop)"}`}}>
+                <BC c={hazard ? "⚠ Important" : "Field note"}
+                  s={{fontSize:13,fontWeight:900,letterSpacing:".1em",
+                    textTransform:"uppercase",display:"block",marginBottom:5,
+                    color: hazard ? "#ef4444" : "var(--cop)"}}/>
+                <div style={{fontSize:15,lineHeight:1.55,
+                  color: hazard ? "rgba(255,190,190,.9)" : "var(--w80)"}}>{n}</div>
+              </div>
+            );
+          })()}
           <BC c="Find at retailer" s={{fontSize:14,fontWeight:800,
             color:"var(--w50)",letterSpacing:".1em",textTransform:"uppercase",
             display:"block",marginBottom:10}}/>
           <div style={{display:"flex",flexDirection:"column",gap:7}}>
             {retailers.map(r=>(
               <a key={r.id}
-                href={r.url(fitting.search)}
+                href={r.id === "homedepot" && fitting.hdUrl ? fitting.hdUrl : r.url(fitting.search)}
                 target="_blank" rel="noopener noreferrer"
                 style={{
                   display:"flex",alignItems:"center",justifyContent:"space-between",
@@ -2592,8 +3262,10 @@ function FittingCard({fitting, retailers, sponsored}) {
                       color:"var(--cop)",fontWeight:900,letterSpacing:".08em"}}/>
                   )}
                 </div>
-                <BC c="Search →" s={{fontSize:15,fontWeight:700,
-                  color:r.sponsored?"var(--cop)":"var(--w50)"}}/>
+                <BC c={r.id === "homedepot" && fitting.hdUrl ? "Open part →" : "Search →"}
+                  s={{fontSize:15,fontWeight:700,
+                  color:r.id === "homedepot" && fitting.hdUrl ? "var(--cop)"
+                       : r.sponsored ? "var(--cop)" : "var(--w50)"}}/>
               </a>
             ))}
           </div>
@@ -2622,6 +3294,9 @@ const COMPAT_MATERIALS = [
   "Galvanized Steel",
   "Black Steel",
   "Cast Iron",
+  "Copper DWV",
+  "CPVC Sch 80",
+  "AC Pipe (Asbestos Cement)",
   "CSST (Gas)",
   "Polybutylene",
   "Lead",
@@ -3306,6 +3981,192 @@ const COMPAT_DB = {
     warning:"Lead is a health hazard. Do not disturb without PPE. Replacement is required — transitioning to copper without removing the lead section is not an acceptable repair.",
   },
 
+
+  /* ── COPPER DWV ── */
+  [compatKey("Copper DWV","Copper DWV")]: {
+    level:"DIRECT",
+    summary:"Solder with DWV fittings. Drainage only — never pressure.",
+    dielectric:false,
+    fittings:[
+      { desc:"Copper DWV solder coupling", brand:"Nibco / Mueller", part:"—",
+        search:"copper DWV solder coupling ASTM B306" },
+    ],
+    steps:[
+      "Cut square, ream, clean both surfaces to bright copper",
+      "Flux, assemble, heat the fitting — not the pipe",
+      "Feed solder at the joint gap opposite the flame",
+      "Lead-free solder required if the line could ever serve potable water",
+    ],
+    code:"ASTM B306 tube · ASME B16.23 DWV fittings. Drainage, waste and vent only.",
+    notes:'Copper DWV has the same OD as copper pressure at each nominal size but a much '
+        + 'thinner wall. It starts at 1¼" — there is no ½" or ¾" DWV.',
+    warning:"Copper DWV is NOT pressure rated. Never substitute it for Type M, L or K supply pipe.",
+  },
+  [compatKey("Copper DWV","Copper")]: {
+    level:"SPECIAL",
+    summary:"Same OD, same fittings will physically fit — but the wall thickness and rating are different.",
+    dielectric:false,
+    fittings:[
+      { desc:"Copper DWV × pressure adapter", brand:"Nibco", part:"—",
+        search:"copper DWV to copper pressure solder adapter" },
+    ],
+    steps:[
+      "Confirm which side is DWV — DWV tube is noticeably thinner and lighter",
+      "Solder normally; the OD is identical so the fitting seats correctly",
+      "Never carry pressure through the DWV section",
+    ],
+    code:"ASTM B306 (DWV) vs ASTM B88 (pressure). Different tube standards.",
+    warning:"A DWV fitting will slip onto pressure tube and look perfect. It is not rated for it — "
+          + "verify before soldering supply into a drainage fitting.",
+  },
+  [compatKey("Copper DWV","Cast Iron")]: {
+    level:"ADAPTER",
+    summary:"Standard drain transition — shielded no-hub coupling over both ends.",
+    dielectric:false,
+    fittings:[
+      { desc:"No-hub shielded coupling", brand:"Mission", part:"MC-series",
+        search:"Mission no-hub shielded coupling copper DWV cast iron" },
+      { desc:"Fernco flexible coupling", brand:"Fernco", part:"1056-series",
+        search:"Fernco copper DWV cast iron coupling" },
+    ],
+    steps:[
+      "Cut cast iron clean — snap cutter or grinder",
+      "Clean both ends of scale and tar",
+      "Slide coupling over cast iron, insert copper DWV, tighten bands evenly",
+      'Torque 60 in-lb (2"), 80 in-lb (3"–4")',
+    ],
+    code:"CISPI 310 shielded couplings for hubless. ASTM C1540 for heavy duty.",
+    notes:"Very common in older buildings — copper DWV branches into a cast iron stack.",
+  },
+  [compatKey("Copper DWV","PVC")]: {
+    level:"ADAPTER",
+    summary:"Fernco or threaded adapter. No solvent bonds copper to plastic.",
+    dielectric:false,
+    fittings:[
+      { desc:"Fernco flexible coupling", brand:"Fernco", part:"1056-series",
+        search:"Fernco copper DWV to PVC coupling" },
+    ],
+    steps:[
+      "Fernco flexible coupling is the usual method for drain work",
+      "Or solder a male adapter to the copper and thread into a PVC female fitting",
+      "Tape or dope on male threads only",
+    ],
+    code:"Approved DWV transition per UPC/IPC.",
+    notes:"Typical during partial re-pipes where copper DWV meets new PVC.",
+  },
+  [compatKey("Copper DWV","ABS")]: {
+    level:"ADAPTER",
+    summary:"Same as copper DWV to PVC — mechanical coupling only.",
+    dielectric:false,
+    fittings:[
+      { desc:"Fernco flexible coupling", brand:"Fernco", part:"1056-series",
+        search:"Fernco copper DWV to ABS coupling" },
+    ],
+    steps:["Fernco coupling over both ends","Tighten bands evenly, alternate sides"],
+    code:"Approved DWV transition.",
+    notes:"West Coast homes often have copper DWV meeting ABS branches.",
+  },
+
+  /* ── CPVC SCH 80 ── */
+  [compatKey("CPVC Sch 80","CPVC")]: {
+    level:"DIRECT",
+    summary:"Same material and same cement — Sch 80 simply has a thicker wall.",
+    dielectric:false,
+    fittings:[
+      { desc:"CPVC Sch 80 × Sch 40 coupling", brand:"Spears", part:"—",
+        search:"CPVC schedule 80 to schedule 40 coupling" },
+    ],
+    steps:[
+      "Both are CPVC — use CPVC primer (yellow/orange) and CPVC cement",
+      "OD is identical at each nominal size, so fittings interchange",
+      "Sch 80 has a smaller ID — expect a small flow restriction at the transition",
+    ],
+    code:"ASTM F441 (Sch 80 pipe) · ASTM F439 (Sch 80 fittings) · ASTM F493 cement.",
+    notes:"Grey is Sch 80, tan/cream is Sch 40 CPVC. Same chemistry.",
+  },
+  [compatKey("CPVC Sch 80","PVC")]: {
+    level:"SPECIAL",
+    summary:"Different materials — cements are not interchangeable. Mechanical or transition only.",
+    dielectric:false,
+    fittings:[
+      { desc:"PVC × CPVC transition union", brand:"Spears", part:"8830 series",
+        search:"PVC CPVC transition union schedule 80" },
+    ],
+    steps:[
+      "Do NOT use PVC cement on CPVC or CPVC cement on PVC",
+      "Use a mechanical union — solvent each side with its own correct cement",
+      "Or an all-purpose transition cement where local code allows",
+    ],
+    code:"Verify locally — some jurisdictions prohibit all-purpose transition cement.",
+    warning:"Grey Sch 80 CPVC and grey Sch 80 PVC look nearly identical. Check the print line "
+          + "before cementing — wrong cement is the number one CPVC joint failure.",
+  },
+
+  /* ── AC PIPE (ASBESTOS CEMENT) ── */
+  [compatKey("AC Pipe (Asbestos Cement)","AC Pipe (Asbestos Cement)")]: {
+    level:"SPECIAL",
+    summary:"Heavy duty full-circumferential clamp coupling. Asbestos — wet methods and PPE required.",
+    dielectric:false,
+    fittings:[
+      { desc:"JCM 102 Extended Range Universal Clamp Coupling", brand:"JCM", part:"102-series",
+        search:"JCM 102 extended range universal clamp coupling asbestos cement" },
+      { desc:"JCM 132 All Stainless Extended Range", brand:"JCM", part:"132-series",
+        search:"JCM 132 all stainless extended range clamp coupling asbestos cement" },
+    ],
+    steps:[
+      "STOP — confirm the pipe is asbestos cement before any cutting or grinding",
+      "Wet-cut only. Never dry cut, grind, or abrade AC pipe",
+      "Full PPE: respirator, disposable coveralls, gloves, eye protection",
+      "Determine the actual pipe OD — AC ODs differ from cast iron at the same nominal size",
+      "Select clamp by OD and band width, then torque per JCM spec",
+      "Bag and dispose of debris per local asbestos regulations",
+    ],
+    code:"Clamps to ANSI/AWWA C230. Asbestos handling per EPA NESHAP and Cal/OSHA 1529.",
+    warning:"ASBESTOS. Cutting, grinding or breaking AC pipe releases friable fibers. "
+          + "Licensed abatement may be required. Notify the owner in writing.",
+    notes:'JCM 102 and 132 cover AC and cast iron 4"–12" in six clamp sizes.',
+  },
+  [compatKey("AC Pipe (Asbestos Cement)","PVC")]: {
+    level:"SPECIAL",
+    summary:"The standard replacement transition — wide-range clamp coupling spans the OD difference.",
+    dielectric:false,
+    fittings:[
+      { desc:"JCM 102 Extended Range Coupling", brand:"JCM", part:"102-series",
+        search:"JCM 102 extended range coupling asbestos cement to PVC" },
+      { desc:"JCM 132 All Stainless Extended Range", brand:"JCM", part:"132-series",
+        search:"JCM 132 stainless coupling AC pipe PVC transition" },
+    ],
+    steps:[
+      "Wet-cut the AC pipe. Full PPE. No dry cutting",
+      'AC and PVC ODs differ substantially — 6" AC is 7.100", 6" PVC is far smaller',
+      "Use an extended-range clamp rated to span both ODs",
+      "Torque evenly and verify the gasket seated on both pipes",
+      "Anchor the pipe — clamps do not resist lateral pull-out",
+    ],
+    code:"ANSI/AWWA C230. Asbestos work per EPA NESHAP and state rules.",
+    warning:"ASBESTOS. Most AC-to-PVC work is a main replacement — verify abatement "
+          + "requirements before breaking the line.",
+    notes:"This is the most common AC transition in the field: failing transite main cut back to new PVC.",
+  },
+  [compatKey("AC Pipe (Asbestos Cement)","Cast Iron")]: {
+    level:"SPECIAL",
+    summary:"JCM extended range clamp — designed specifically for mixed AC and cast iron systems.",
+    dielectric:false,
+    fittings:[
+      { desc:"JCM 102 Extended Range Universal Clamp", brand:"JCM", part:"102-series",
+        search:"JCM 102 clamp coupling asbestos cement cast iron" },
+      { desc:"JCM 132 All Stainless Extended Range", brand:"JCM", part:"132-series",
+        search:"JCM 132 stainless clamp coupling AC cast iron" },
+    ],
+    steps:[
+      "Wet methods and PPE on the AC side",
+      "Measure both ODs — they differ at the same nominal size",
+      "Extended range clamp is required to span both",
+    ],
+    code:"ANSI/AWWA C230.",
+    warning:"ASBESTOS on the AC side. Wet-cut only.",
+    notes:'JCM built the 102 and 132 for exactly this — systems running both AC and cast iron.',
+  },
   /* ── SDR 35 Sewer ── */
   [compatKey("SDR 35 Sewer","SDR 35 Sewer")]: {
     level:"DIRECT",
@@ -3827,37 +4688,39 @@ function HomeTile({tile, navigate}) {
       onPointerLeave={() => setPressed(false)}
       style={{
         display:"flex",
-        flexDirection:"column",
-        alignItems:"flex-start",
-        gap:10,
-        padding:"16px 14px 14px",
+        alignItems:"center",
+        gap:16,
+        padding:"0 18px",
         borderRadius:"var(--rm)",
         cursor:"pointer",
         textAlign:"left",
         width:"100%",
+        height:"100%",
         background: pressed ? "var(--blk3)" : "var(--blk2)",
         border:`1px solid ${pressed ? "var(--cop)" : "var(--bdr)"}`,
         transition:"background .1s, border-color .1s",
         minHeight:"unset",
       }}>
-      <div style={{color:"var(--w80)"}}>{tile.icon}</div>
-      <div style={{width:"100%"}}>
+      <div style={{color: pressed ? "var(--cop)" : "var(--w80)",flexShrink:0,
+        transition:"color .1s",display:"flex"}}>{tile.icon}</div>
+      <div style={{flex:1,minWidth:0}}>
         <BC c={tile.label} s={{
-          fontSize:15,
-          fontWeight:800,
+          fontSize:21,
+          fontWeight:900,
           color:"var(--wht)",
           display:"block",
-          marginBottom:2,
+          marginBottom:3,
           letterSpacing:".05em",
         }}/>
-        <div style={{fontSize:12,color:"var(--w50)",lineHeight:1.35}}>{tile.sub}</div>
+        <div style={{fontSize:14,color:"var(--w50)",lineHeight:1.35}}>{tile.sub}</div>
       </div>
+      <BC c="›" s={{fontSize:26,color:"var(--w25)",flexShrink:0,lineHeight:1}}/>
     </button>
   );
 }
 
 
-function HomeScreen({navigate, screen}) {
+function HomeScreen({navigate, screen, trial, onBuy}) {
 
   const TILES = [
     {
@@ -3865,7 +4728,7 @@ function HomeScreen({navigate, screen}) {
       label:"COMPATIBILITY",
       sub:"Can these two pipes connect?",
       icon:(
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M8 6h8M8 12h8M8 18h8"/>
           <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/>
@@ -3882,7 +4745,7 @@ function HomeScreen({navigate, screen}) {
       label:"FITTINGS",
       sub:"Part numbers + where to buy",
       icon:(
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
@@ -3899,7 +4762,7 @@ function HomeScreen({navigate, screen}) {
       label:"REFERENCE",
       sub:"OD table · solvents · tips · danger",
       icon:(
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="1"/>
           <path d="M3 9h18M3 15h18M9 3v18"/>
@@ -3917,6 +4780,7 @@ function HomeScreen({navigate, screen}) {
       {/* ── HEADER — spec plate ── */}
       <div style={{flexShrink:0,background:"var(--blk)"}}>
         <div style={{height:2,background:"var(--cop)"}}/>
+        {trial && <TrialBanner trial={trial} onBuy={onBuy}/>}
         <div style={{padding:"16px 16px 13px",borderBottom:"1px solid var(--bdr)"}}>
           <div style={{display:"flex",alignItems:"center",gap:13}}>
             <svg viewBox="0 0 64 96" style={{width:33,height:50,flexShrink:0}} aria-hidden="true">
@@ -3934,11 +4798,12 @@ function HomeScreen({navigate, screen}) {
       </div>
 
       {/* ── MENU GRID ── */}
-      <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",minHeight:0,
-        padding:"10px 12px 6px",display:"flex",flexDirection:"column",gap:8}}>
+      <div style={{flex:1,minHeight:0,
+        padding:"12px 12px 10px",display:"flex",flexDirection:"column",gap:10}}>
 
-        {/* Tool grid — one row */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+        {/* Tool rows — fill available height */}
+        <div style={{flex:1,minHeight:0,display:"grid",
+          gridTemplateRows:"repeat(3, minmax(84px, 1fr))",gap:10}}>
           {TILES.map(tile=>(
             <HomeTile key={tile.id} tile={tile} navigate={navigate}/>
           ))}

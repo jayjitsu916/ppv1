@@ -326,10 +326,13 @@ const SectionLabel = ({c}) => (
    in child components.
 ═══════════════════════════════════════════════════════════ */
 /* ─── Onboarding feature cards ─────────────────────────────── */
-const ONBOARD_FEATURES = [
-  {icon:"📏", title:"No calipers needed",     body:"Wrap a string around the pipe, measure it, enter the length — get the OD."},
-  {icon:"⚠️",  title:"Hazmat detection",       body:"Automatically flags Kitec, polybutylene, lead, and other dangerous materials."},
-  {icon:"🔧", title:"Part numbers + where to buy", body:"Real part numbers and retailer links for fittings that fit your exact pipe."},
+const onboardFeatures = () => [
+  {icon:"📏", title:T("ob.f1","No calipers needed"),
+    body:T("ob.f1b","Wrap a string around the pipe, measure it, enter the length — get the OD.")},
+  {icon:"⚠️", title:T("ob.f2","Hazmat detection"),
+    body:T("ob.f2b","Automatically flags Kitec, polybutylene, lead, and other dangerous materials.")},
+  {icon:"🔧", title:T("ob.f3","Part numbers + where to buy"),
+    body:T("ob.f3b","Real part numbers and retailer links for fittings that fit your exact pipe.")},
 ];
 
 
@@ -495,6 +498,97 @@ const STRINGS = {
                      uk:"Професійний польовий довідник" },
   "ob.start":      { es:"COMENZAR",  ru:"НАЧАТЬ",  uk:"ПОЧАТИ" },
 
+
+  /* Connect screen */
+  "cx.title":      { es:"Verificador de compatibilidad de tubos",
+                     ru:"Проверка совместимости труб",
+                     uk:"Перевірка сумісності труб" },
+  "cx.blurb":      { es:"Elige dos materiales para ver exactamente cómo conectarlos — conexiones, pasos, requisitos dieléctricos y notas de código.",
+                     ru:"Выберите два материала труб, чтобы увидеть, как именно их соединить — фитинги, шаги, требования к диэлектрику и нормы.",
+                     uk:"Виберіть два матеріали труб, щоб побачити, як саме їх з'єднати — фітинги, кроки, вимоги до діелектрика та норми." },
+  "cx.pipeA":      { es:"Tubo A",  ru:"Труба А",  uk:"Труба А" },
+  "cx.pipeB":      { es:"Tubo B",  ru:"Труба Б",  uk:"Труба Б" },
+  "cx.none":       { es:"Combinación no está en la base de datos",
+                     ru:"Такой комбинации нет в базе",
+                     uk:"Такої комбінації немає в базі" },
+  "cx.dielReq":    { es:"⚡ SE REQUIERE DIELÉCTRICO",
+                     ru:"⚡ ТРЕБУЕТСЯ ДИЭЛЕКТРИК",
+                     uk:"⚡ ПОТРІБЕН ДІЕЛЕКТРИК" },
+  "cx.dielUnion":  { es:"⚡ Se requiere unión dieléctrica",
+                     ru:"⚡ Требуется диэлектрическая муфта",
+                     uk:"⚡ Потрібна діелектрична муфта" },
+  "cx.warning":    { es:"⚠ Advertencia", ru:"⚠ Предупреждение", uk:"⚠ Попередження" },
+  "cx.fittings":   { es:"Opciones de conexión", ru:"Варианты фитингов", uk:"Варіанти фітингів" },
+  "cx.steps":      { es:"Paso a paso",   ru:"Пошагово",      uk:"Покроково"    },
+  "cx.code":       { es:"Referencia de código", ru:"Ссылка на нормы", uk:"Посилання на норми" },
+  "cx.notes":      { es:"Notas de campo", ru:"Заметки с объекта", uk:"Нотатки з об'єкта" },
+
+  /* Compatibility verdicts */
+  "lvl.DIRECT":    { es:"Conexión directa",        ru:"Прямое соединение",      uk:"Пряме з'єднання" },
+  "lvl.ADAPTER":   { es:"Se requiere adaptador",   ru:"Нужен переходник",       uk:"Потрібен перехідник" },
+  "lvl.SPECIAL":   { es:"Requisitos especiales",   ru:"Особые требования",      uk:"Особливі вимоги" },
+  "lvl.AVOID":     { es:"Evitar / No recomendado", ru:"Избегать / Не рекомендуется", uk:"Уникати / Не рекомендовано" },
+  "lvl.ILLEGAL":   { es:"Violación del código",    ru:"Нарушение норм",         uk:"Порушення норм" },
+
+  /* Onboarding */
+  "ob.f1":  { es:"Sin calibrador",  ru:"Штангенциркуль не нужен", uk:"Штангенциркуль не потрібен" },
+  "ob.f1b": { es:"Envuelve un cordón alrededor del tubo, mídelo, escribe el largo — y obtienes el OD.",
+              ru:"Оберните шнур вокруг трубы, измерьте его, введите длину — получите наружный диаметр.",
+              uk:"Оберніть шнур навколо труби, виміряйте його, введіть довжину — отримаєте зовнішній діаметр." },
+  "ob.f2":  { es:"Detección de materiales peligrosos", ru:"Обнаружение опасных материалов", uk:"Виявлення небезпечних матеріалів" },
+  "ob.f2b": { es:"Marca automáticamente Kitec, polibutileno, plomo y otros materiales peligrosos.",
+              ru:"Автоматически отмечает Kitec, полибутилен, свинец и другие опасные материалы.",
+              uk:"Автоматично позначає Kitec, полібутилен, свинець та інші небезпечні матеріали." },
+  "ob.f3":  { es:"Números de parte y dónde comprar", ru:"Номера деталей и где купить", uk:"Номери деталей і де купити" },
+  "ob.f3b": { es:"Números de parte reales y enlaces a tiendas para conexiones que sí embonan con tu tubo.",
+              ru:"Настоящие номера деталей и ссылки на магазины для фитингов, подходящих именно к вашей трубе.",
+              uk:"Справжні номери деталей і посилання на магазини для фітингів, що підходять саме до вашої труби." },
+
+  /* Fitting types — trade shorthand, not textbook translations */
+  "ft.all":         { es:"Todos",            ru:"Все",              uk:"Усі" },
+  "ft.coupling":    { es:"Cople",            ru:"Муфта",            uk:"Муфта" },
+  "ft.reducer":     { es:"Reductor",         ru:"Переходник",       uk:"Перехідник" },
+  "ft.elbow90":     { es:"Noventa",          ru:"Отвод 90°",        uk:"Коліно 90°" },
+  "ft.elbow45":     { es:"Cuarenta y cinco", ru:"Отвод 45°",        uk:"Коліно 45°" },
+  "ft.elbow225":    { es:"Veintidós y medio",ru:"Отвод 22½°",       uk:"Коліно 22½°" },
+  "ft.tee":         { es:"Te / Wye",         ru:"Тройник / Косой",  uk:"Трійник / Косий" },
+  "ft.cross":       { es:"Cruz",             ru:"Крестовина",       uk:"Хрестовина" },
+  "ft.dblfix":      { es:"Doble mueble",     ru:"Двойной прибор",   uk:"Подвійний прилад" },
+  "ft.cap":         { es:"Tapón",            ru:"Заглушка",         uk:"Заглушка" },
+  "ft.union":       { es:"Unión",            ru:"Американка",       uk:"Американка" },
+  "ft.trap":        { es:"Céspol",           ru:"Сифон",            uk:"Сифон" },
+  "ft.cleanout":    { es:"Registro",         ru:"Ревизия",          uk:"Ревізія" },
+  "ft.flange":      { es:"Brida",            ru:"Фланец",           uk:"Фланець" },
+  "ft.saddle":      { es:"Silleta",          ru:"Седелка",          uk:"Сідельце" },
+  "ft.street":      { es:"Codo calle",       ru:"Отвод раструб-гладкий", uk:"Коліно розтруб-гладкий" },
+  "ft.press":       { es:"Press",            ru:"Пресс-фитинг",     uk:"Прес-фітинг" },
+  "ft.transition":  { es:"Transición",       ru:"Переход",          uk:"Перехід" },
+  "ft.fernco":      { es:"Fernco / Flexible",ru:"Fernco / Гибкая",  uk:"Fernco / Гнучка" },
+  "ft.repair":      { es:"Reparación / Rango",ru:"Ремонтный хомут", uk:"Ремонтний хомут" },
+  "ft.slip":        { es:"Cople deslizante", ru:"Скользящая муфта", uk:"Ковзна муфта" },
+  "ft.compression": { es:"Compresión",       ru:"Обжимная",         uk:"Обтискна" },
+  "ft.telescopic":  { es:"Telescópico",      ru:"Телескопическая",  uk:"Телескопічна" },
+  "ft.hose":        { es:"Rosca de manguera",ru:"Шланговая резьба", uk:"Шлангова різьба" },
+
+  /* Materials */
+  "mat.Copper":             { es:"Cobre",              ru:"Медь",                  uk:"Мідь" },
+  "mat.Copper DWV":         { es:"Cobre DWV",          ru:"Медь DWV",              uk:"Мідь DWV" },
+  "mat.Cast Iron":          { es:"Hierro fundido",     ru:"Чугун",                 uk:"Чавун" },
+  "mat.Galvanized Steel":   { es:"Acero galvanizado",  ru:"Оцинкованная сталь",    uk:"Оцинкована сталь" },
+  "mat.Black Steel":        { es:"Acero negro",        ru:"Чёрная сталь",          uk:"Чорна сталь" },
+  "mat.Lead":               { es:"Plomo",              ru:"Свинец",                uk:"Свинець" },
+  "mat.Polybutylene":       { es:"Polibutileno",       ru:"Полибутилен",           uk:"Полібутилен" },
+  "mat.PVC (Schedule 40)":  { es:"PVC cédula 40",      ru:"PVC Sch 40",            uk:"PVC Sch 40" },
+  "mat.PVC (Schedule 80)":  { es:"PVC cédula 80",      ru:"PVC Sch 80",            uk:"PVC Sch 80" },
+  "mat.PVC DWV (Sch 40)":   { es:"PVC DWV cédula 40",  ru:"PVC DWV Sch 40",        uk:"PVC DWV Sch 40" },
+  "mat.CPVC (Schedule 80)": { es:"CPVC cédula 80",     ru:"CPVC Sch 80",           uk:"CPVC Sch 80" },
+  "mat.CPVC Sch 80":        { es:"CPVC cédula 80",     ru:"CPVC Sch 80",           uk:"CPVC Sch 80" },
+  "mat.AC Pipe (Transite)": { es:"Tubo de asbesto (Transite)", ru:"Асбестоцементная труба", uk:"Азбестоцементна труба" },
+  "mat.AC Pipe (Asbestos Cement)": { es:"Tubo de asbesto-cemento", ru:"Асбестоцементная труба", uk:"Азбестоцементна труба" },
+  "mat.SDR 35 Sewer":            { es:"SDR 35 drenaje",          ru:"SDR 35 канализация",    uk:"SDR 35 каналізація" },
+  "mat.SDR 35 Sewer — Solid":     { es:"SDR 35 drenaje — sólido", ru:"SDR 35 — сплошная",     uk:"SDR 35 — суцільна" },
+  "mat.SDR 35 Sewer — Perforated":{ es:"SDR 35 drenaje — perforado", ru:"SDR 35 — перфорированная", uk:"SDR 35 — перфорована" },
+  "mat.CSST (Gas)":         { es:"CSST (Gas)",         ru:"CSST (газ)",            uk:"CSST (газ)" },
   /* Language picker */
   "lang.title":    { es:"Idioma", ru:"Язык", uk:"Мова" },
 };
@@ -851,10 +945,10 @@ export default function App() {
           </svg>
           <BC c="POCKET PLUMBER™" s={{fontSize:27,fontWeight:900,
             letterSpacing:".03em",color:"var(--wht)",marginBottom:8}}/>
-          <BC c="A contractor-grade field reference" s={{
+          <BC c={T("ob.sub","A contractor-grade field reference")} s={{
             fontSize:18,fontWeight:700,
             color:"rgba(240,235,224,.4)",marginBottom:28,letterSpacing:".02em"}}/>
-          {ONBOARD_FEATURES.map(f=>(
+          {onboardFeatures().map(f=>(
             <div key={f.title} style={{
               display:"flex",gap:14,alignItems:"flex-start",
               marginBottom:16,width:"100%",maxWidth:360,
@@ -873,7 +967,7 @@ export default function App() {
             fontSize:23,fontWeight:800,letterSpacing:".08em",
             color:"var(--blk)",
           }}>
-            GET STARTED
+            {T("ob.start","GET STARTED")}
           </div>
           <div style={{fontSize:16,color:"var(--w25)",marginTop:10,letterSpacing:".06em"}}>
             Tap anywhere to continue
@@ -2283,7 +2377,7 @@ function ProTipsTab() {
           background:activeCat==="all"?"var(--wht)":"var(--blk3)",
           color:activeCat==="all"?"var(--blk)":"var(--w50)",
           border:`1px solid ${activeCat==="all"?"var(--wht)":"var(--bdr2)"}`,
-        }}>ALL</button>
+        }}>{T("ft.all","ALL")}</button>
         {TIP_CATS.map(c=>(
           <button key={c.id} onClick={()=>setActiveCat(c.id)} style={{
             padding:"5px 11px",borderRadius:20,fontSize:17,cursor:"pointer",
@@ -2445,6 +2539,9 @@ const NOMINAL_SIZES = [
 ];
 
 /* Fitting types with icons */
+/* Display name for a material (the raw string stays the data key) */
+const matLabel = (m) => T("mat." + m, m);
+
 const FITTING_TYPES = [
   { id:"coupling",     label:"Coupling"           },
   { id:"reducer",      label:"Reducer / Bushing"  },
@@ -3231,7 +3328,7 @@ function FittingsScreen({screen, navigate}) {
   /* How many ports the selected fitting has. "All" shows one size only,
      since port count is a property of the fitting type. */
   const portCount = typeFilter === "all" ? 1 : (FITTING_PORTS[typeFilter] || 1);
-  const labels    = PORT_LABELS[typeFilter] || ["Size"];
+  const labels    = PORT_LABELS[typeFilter] || [T("sel.size","Size")];
 
   const setPort = (i, val) => setSizes(prev => {
     const next = [...prev];
@@ -3281,7 +3378,7 @@ function FittingsScreen({screen, navigate}) {
         maxHeight:"38vh",overflowY:"auto"}}>
 
         {/* Material */}
-        <BC c="Material" s={{fontSize:16,fontWeight:800,color:"var(--w50)",
+        <BC c={T("sel.material","Material")} s={{fontSize:16,fontWeight:800,color:"var(--w50)",
           letterSpacing:".1em",textTransform:"uppercase",display:"block",marginBottom:6}}/>
         <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
           {FITTING_MATERIALS.map(mat=>(
@@ -3294,7 +3391,7 @@ function FittingsScreen({screen, navigate}) {
               border:"1px solid " + (material===mat?"var(--cop)":"var(--bdr2)"),
               transition:"all .12s",
               minHeight:"unset",
-            }}>{mat}</button>
+            }}>{matLabel(mat)}</button>
           ))}
         </div>
 
@@ -3317,7 +3414,7 @@ function FittingsScreen({screen, navigate}) {
                     background:"rgba(245,197,24,.15)",color:"var(--yel)",
                     border:"1px solid rgba(245,197,24,.3)",minHeight:"unset",
                     fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
-                  }}>✕ match run</button>
+                  }}>{T("spec.match","✕ match run")}</button>
                 )}
               </div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -3347,7 +3444,7 @@ function FittingsScreen({screen, navigate}) {
             padding:"9px 12px",marginBottom:10,borderRadius:"var(--r)",
             background:reducing?"rgba(245,197,24,.08)":"var(--blk3)",
             border:`1px solid ${reducing?"rgba(245,197,24,.3)":"var(--bdr)"}`}}>
-            <BC c={reducing?"REDUCING":"STRAIGHT"} s={{fontSize:16,fontWeight:900,
+            <BC c={reducing?T("spec.reducing","REDUCING"):T("spec.straight","STRAIGHT")} s={{fontSize:16,fontWeight:900,
               letterSpacing:".1em",color:reducing?"var(--yel)":"var(--w25)"}}/>
             <Mono c={sizeSpec} s={{fontSize:20,fontWeight:700,color:"var(--wht)"}}/>
           </div>
@@ -3365,8 +3462,8 @@ function FittingsScreen({screen, navigate}) {
           background:typeFilter==="all"?"var(--wht)":"var(--blk3)",
           color:typeFilter==="all"?"var(--blk)":"var(--w50)",
           border:"1px solid " + (typeFilter==="all"?"var(--wht)":"var(--bdr2)"),
-        }}>ALL</button>
-        {FITTING_TYPES.map(ft=>(
+        }}>{T("ft.all","ALL")}</button>
+        {FITTING_TYPES.map(ft=>({...ft, label:T("ft."+ft.id, ft.label)})).map(ft=>(
           <button key={ft.id} onClick={()=>setTypeFilter(ft.id)} style={{
             padding:"7px 12px",borderRadius:20,fontSize:17,cursor:"pointer",whiteSpace:"nowrap",
             fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,letterSpacing:".06em",minHeight:"unset",
@@ -3570,13 +3667,20 @@ const COMPAT_MATERIALS = [
 ];
 
 /* Compatibility level */
-const COMPAT_LEVEL = {
+const COMPAT_LEVEL_EN = {
   DIRECT:    { color:"#22c55e", label:"Direct Connection",      icon:"✓" },
   ADAPTER:   { color:"#f5c518", label:"Adapter Required",       icon:"⚡" },
   SPECIAL:   { color:"#f97316", label:"Special Requirements",   icon:"⚠" },
   AVOID:     { color:"#ef4444", label:"Avoid / Not Recommended",icon:"✕" },
   ILLEGAL:   { color:"#ef4444", label:"Code Violation",         icon:"🚫" },
 };
+/* Verdict labels resolve through T() at render time */
+const COMPAT_LEVEL = new Proxy(COMPAT_LEVEL_EN, {
+  get(t, k) {
+    const e = t[k];
+    return e && e.label ? { ...e, label: T("lvl." + String(k), e.label) } : e;
+  }
+});
 
 /* Helper: sort two strings to make a canonical key */
 const compatKey = (a, b) => [a, b].sort().join(" || ");
@@ -4672,11 +4776,10 @@ function CompatScreen({screen, navigate}) {
         <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
           border:"1px solid var(--bdr2)",borderLeft:"4px solid var(--grn)",
           padding:"11px 14px",marginBottom:16}}>
-          <BC c="Pipe compatibility checker"
+          <BC c={T("cx.title","Pipe compatibility checker")}
             s={{fontSize:19,fontWeight:900,color:"var(--wht)",display:"block",marginBottom:3}}/>
           <div className="body-muted">
-            Select two pipe materials to see exactly how to connect them — fittings, steps, dielectric requirements, and code notes.
-          </div>
+            {T("cx.blurb","Select two pipe materials to see exactly how to connect them — fittings, steps, dielectric requirements, and code notes.")}</div>
         </div>
 
         {/* Pipe A + B selectors side by side */}
@@ -4686,7 +4789,7 @@ function CompatScreen({screen, navigate}) {
           {/* Pipe A */}
           <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
             border:"1px solid var(--bdr2)",padding:"12px 12px 10px"}}>
-            <BC c="Pipe A" s={{fontSize:17,fontWeight:800,color:"var(--w50)",
+            <BC c={T("cx.pipeA","Pipe A")} s={{fontSize:17,fontWeight:800,color:"var(--w50)",
               letterSpacing:".1em",display:"block",marginBottom:8}}/>
             <select value={matA} onChange={e=>setMatA(e.target.value)}
               style={{width:"100%",padding:"9px 8px",borderRadius:"var(--r)",
@@ -4694,7 +4797,7 @@ function CompatScreen({screen, navigate}) {
                 color:"var(--wht)",fontSize:18,outline:"none",marginBottom:8,
                 fontFamily:"'Barlow',sans-serif"}}>
               {COMPAT_MATERIALS.map(m=>(
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>{matLabel(m)}</option>
               ))}
             </select>
             <select value={sizeA} onChange={e=>setSizeA(e.target.value)}
@@ -4717,7 +4820,7 @@ function CompatScreen({screen, navigate}) {
           {/* Pipe B */}
           <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
             border:"1px solid var(--bdr2)",padding:"12px 12px 10px"}}>
-            <BC c="Pipe B" s={{fontSize:17,fontWeight:800,color:"var(--w50)",
+            <BC c={T("cx.pipeB","Pipe B")} s={{fontSize:17,fontWeight:800,color:"var(--w50)",
               letterSpacing:".1em",display:"block",marginBottom:8}}/>
             <select value={matB} onChange={e=>setMatB(e.target.value)}
               style={{width:"100%",padding:"9px 8px",borderRadius:"var(--r)",
@@ -4725,7 +4828,7 @@ function CompatScreen({screen, navigate}) {
                 color:"var(--wht)",fontSize:18,outline:"none",marginBottom:8,
                 fontFamily:"'Barlow',sans-serif"}}>
               {COMPAT_MATERIALS.map(m=>(
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>{matLabel(m)}</option>
               ))}
             </select>
             <select value={sizeB} onChange={e=>setSizeB(e.target.value)}
@@ -4759,7 +4862,7 @@ function CompatScreen({screen, navigate}) {
           <div style={{padding:"20px",textAlign:"center",
             background:"var(--blk2)",borderRadius:"var(--r)",
             border:"1px solid var(--bdr2)"}}>
-            <BC c="Combination not in database"
+            <BC c={T("cx.none","Combination not in database")}
               s={{fontSize:20,fontWeight:800,display:"block",marginBottom:6,color:"var(--w50)"}}/>
             <div style={{fontSize:18,color:"var(--w25)"}}>
               Use a Fernco flexible coupling as a universal fallback for drain connections,
@@ -4784,7 +4887,7 @@ function CompatScreen({screen, navigate}) {
                   <div style={{marginLeft:"auto",padding:"3px 10px",borderRadius:2,
                     background:"rgba(239,68,68,.15)",
                     border:"1px solid rgba(239,68,68,.35)"}}>
-                    <BC c="⚡ DIELECTRIC REQUIRED"
+                    <BC c={T("cx.dielReq","⚡ DIELECTRIC REQUIRED")}
                       s={{fontSize:17,fontWeight:900,color:"#ef4444",letterSpacing:".08em"}}/>
                   </div>
                 )}
@@ -4799,7 +4902,7 @@ function CompatScreen({screen, navigate}) {
               <div style={{padding:"12px 14px",borderRadius:"var(--r)",
                 background:"rgba(239,68,68,.08)",
                 border:"2px solid rgba(239,68,68,.35)"}}>
-                <BC c="⚡ Dielectric Union Required"
+                <BC c={T("cx.dielUnion","⚡ Dielectric Union Required")}
                   s={{fontSize:19,fontWeight:900,color:"#ef4444",display:"block",marginBottom:6}}/>
                 <div style={{fontSize:18,color:"rgba(255,180,180,.85)",lineHeight:1.6}}>
                   {matA} and {matB} are dissimilar metals. Direct contact creates a galvanic cell
@@ -4815,7 +4918,7 @@ function CompatScreen({screen, navigate}) {
               <div style={{padding:"10px 14px",borderRadius:"var(--r)",
                 background:"rgba(239,68,68,.08)",
                 border:"1px solid rgba(239,68,68,.3)"}}>
-                <BC c="⚠ Warning" s={{fontSize:18,fontWeight:900,color:"#ef4444",
+                <BC c={T("cx.warning","⚠ Warning")} s={{fontSize:18,fontWeight:900,color:"#ef4444",
                   display:"block",marginBottom:4}}/>
                 <div style={{fontSize:18,color:"rgba(255,180,180,.85)",lineHeight:1.5}}>
                   {compat.warning}
@@ -4828,7 +4931,7 @@ function CompatScreen({screen, navigate}) {
               <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
                 border:"1px solid var(--bdr2)",overflow:"hidden"}}>
                 <div style={{padding:"10px 14px 6px"}}>
-                  <BC c="Fitting Options" s={{fontSize:17,fontWeight:800,
+                  <BC c={T("cx.fittings","Fitting Options")} s={{fontSize:17,fontWeight:800,
                     color:"var(--w50)",letterSpacing:".12em",textTransform:"uppercase"}}/>
                 </div>
                 {compat.fittings.map((f,i)=>{
@@ -4882,7 +4985,7 @@ function CompatScreen({screen, navigate}) {
             {compat.steps?.length > 0 && (
               <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
                 border:"1px solid var(--bdr2)",padding:"12px 14px"}}>
-                <BC c="Step-by-step" s={{fontSize:17,fontWeight:800,
+                <BC c={T("cx.steps","Step-by-step")} s={{fontSize:17,fontWeight:800,
                   color:"var(--w50)",letterSpacing:".12em",textTransform:"uppercase",
                   display:"block",marginBottom:10}}/>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -4907,7 +5010,7 @@ function CompatScreen({screen, navigate}) {
               <div style={{padding:"10px 14px",borderRadius:"var(--r)",
                 background:"rgba(74,158,255,.08)",
                 border:"1px solid rgba(74,158,255,.2)"}}>
-                <BC c="Code Reference" s={{fontSize:17,fontWeight:800,
+                <BC c={T("cx.code","Code Reference")} s={{fontSize:17,fontWeight:800,
                   color:"#4a9eff",letterSpacing:".1em",textTransform:"uppercase",
                   display:"block",marginBottom:5}}/>
                 <div style={{fontSize:19,color:"var(--w80)",lineHeight:1.6}}>
@@ -4920,7 +5023,7 @@ function CompatScreen({screen, navigate}) {
             {compat.notes&&(
               <div style={{padding:"10px 14px",borderRadius:"var(--r)",
                 background:"var(--blk2)",border:"1px solid var(--bdr2)"}}>
-                <BC c="Field Notes" s={{fontSize:17,fontWeight:800,
+                <BC c={T("cx.notes","Field Notes")} s={{fontSize:17,fontWeight:800,
                   color:"var(--w50)",letterSpacing:".1em",textTransform:"uppercase",
                   display:"block",marginBottom:5}}/>
                 <div style={{fontSize:18,color:"var(--w80)",lineHeight:1.6}}>

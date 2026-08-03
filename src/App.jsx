@@ -251,8 +251,8 @@ const CSS = `
   --cop:#c9793c; --cophi:#de9757;          /* accent — copper */
   --grn:#22c55e; --grnhi:#4ade80;
   --yel:#f5c518;
-  --wht:#f0ebe0; --w80:rgba(240,235,224,.80); --w50:rgba(240,235,224,.50);
-  --w40:rgba(240,235,224,.40); --w25:rgba(240,235,224,.25); --w12:rgba(240,235,224,.12); --w06:rgba(240,235,224,.06);
+  --wht:#f0ebe0; --w80:rgba(240,235,224,.92); --w50:rgba(240,235,224,.72);
+  --w40:rgba(240,235,224,.62); --w25:rgba(240,235,224,.48); --w12:rgba(240,235,224,.20); --w06:rgba(240,235,224,.06);
   --bdr:rgba(240,235,224,.14); --bdr2:rgba(240,235,224,.25);
   --r:4px; --rm:8px;
   /* Mobile-first type scale — all sizes defined here, override for desktop */
@@ -312,7 +312,7 @@ div::-webkit-scrollbar { display:none; }
 const Mono = ({c,s={}}) => <span className="mono" style={s}>{c}</span>;
 const BC   = ({c,s={}}) => <span className="bc"   style={s}>{c}</span>;
 const SectionLabel = ({c}) => (
-  <BC c={c} s={{fontSize:15,color:"var(--w50)",letterSpacing:".14em",
+  <BC c={c} s={{fontSize:18,color:"var(--w50)",letterSpacing:".14em",
     textTransform:"uppercase",display:"block",marginBottom:8,fontWeight:700}}/>
 );
 
@@ -339,7 +339,7 @@ const ONBOARD_FEATURES = [
    Token is stored locally so the unlock survives with no signal.
 ═══════════════════════════════════════════════════════════ */
 const TRIAL_DAYS = 3;
-const PRICE_LABEL = "$12";
+const PRICE_LABEL = "$24.99";
 const LS_INSTALL = "pp_install";
 const LS_LICENSE = "pp_license";
 const LS_EMAIL   = "pp_email";
@@ -426,11 +426,11 @@ function PaywallScreen({ onUnlocked }) {
             stroke="var(--cop)" strokeWidth="13" strokeLinecap="round"/>
         </svg>
 
-        <BC c="TRIAL ENDED" s={{fontSize:15,fontWeight:900,letterSpacing:".18em",
+        <BC c="TRIAL ENDED" s={{fontSize:18,fontWeight:900,letterSpacing:".18em",
           color:"var(--cop)",marginBottom:8}}/>
         <BC c="POCKET PLUMBER™" s={{fontSize:31,fontWeight:900,letterSpacing:".02em",
           color:"var(--wht)",marginBottom:6,textAlign:"center"}}/>
-        <div style={{fontSize:15,color:"var(--w50)",textAlign:"center",
+        <div style={{fontSize:18,color:"var(--w50)",textAlign:"center",
           marginBottom:24,lineHeight:1.5,maxWidth:320}}>
           Your 3 free days are up. Unlock it once and it&rsquo;s yours — no subscription,
           no account, works with no signal.
@@ -442,11 +442,11 @@ function PaywallScreen({ onUnlocked }) {
               {FEATURES.map(([title,sub])=>(
                 <div key={title} style={{display:"flex",gap:11,alignItems:"flex-start",
                   padding:"10px 0",borderBottom:"1px solid var(--bdr)"}}>
-                  <BC c="✓" s={{fontSize:17,color:"var(--cop)",flexShrink:0,lineHeight:1.3}}/>
+                  <BC c="✓" s={{fontSize:20,color:"var(--cop)",flexShrink:0,lineHeight:1.3}}/>
                   <div>
-                    <BC c={title} s={{fontSize:17,fontWeight:800,color:"var(--wht)",
+                    <BC c={title} s={{fontSize:20,fontWeight:800,color:"var(--wht)",
                       display:"block",letterSpacing:".03em"}}/>
-                    <div style={{fontSize:13,color:"var(--w50)",marginTop:1}}>{sub}</div>
+                    <div style={{fontSize:16,color:"var(--w50)",marginTop:1}}>{sub}</div>
                   </div>
                 </div>
               ))}
@@ -458,22 +458,22 @@ function PaywallScreen({ onUnlocked }) {
               {busy ? "Opening checkout…" : `Unlock — ${PRICE_LABEL} one time`}
             </button>
 
-            <div style={{fontSize:13,color:"var(--w25)",marginBottom:16,textAlign:"center"}}>
+            <div style={{fontSize:16,color:"var(--w25)",marginBottom:16,textAlign:"center"}}>
               Secure checkout by Stripe · no account needed
             </div>
 
             <button onClick={()=>{setMode("restore");setErr("");}}
               style={{background:"none",border:"none",cursor:"pointer",
-                fontSize:14,color:"var(--w50)",textDecoration:"underline",
+                fontSize:17,color:"var(--w50)",textDecoration:"underline",
                 fontFamily:"inherit",minHeight:"unset"}}>
               Already bought it? Restore purchase
             </button>
           </>
         ) : (
           <div style={{width:"100%",maxWidth:360}}>
-            <BC c="RESTORE PURCHASE" s={{fontSize:14,fontWeight:900,letterSpacing:".12em",
+            <BC c="RESTORE PURCHASE" s={{fontSize:17,fontWeight:900,letterSpacing:".12em",
               color:"var(--w50)",display:"block",marginBottom:10}}/>
-            <div style={{fontSize:14,color:"var(--w50)",marginBottom:12,lineHeight:1.5}}>
+            <div style={{fontSize:17,color:"var(--w50)",marginBottom:12,lineHeight:1.5}}>
               Enter the email you used at checkout. New phone, reinstall, cleared browser —
               this brings it back.
             </div>
@@ -482,7 +482,7 @@ function PaywallScreen({ onUnlocked }) {
               placeholder="you@example.com"
               style={{width:"100%",padding:"13px 14px",borderRadius:"var(--r)",
                 background:"var(--blk3)",border:"1px solid var(--bdr2)",
-                color:"var(--wht)",fontSize:16,marginBottom:12,outline:"none"}}/>
+                color:"var(--wht)",fontSize:19,marginBottom:12,outline:"none"}}/>
             <button onClick={restore} disabled={busy} className="btn-fire"
               style={{width:"100%",padding:"15px",borderRadius:"var(--r)",
                 border:"none",opacity:busy?.6:1,marginBottom:12}}>
@@ -490,7 +490,7 @@ function PaywallScreen({ onUnlocked }) {
             </button>
             <button onClick={()=>{setMode("buy");setErr("");}}
               style={{background:"none",border:"none",cursor:"pointer",width:"100%",
-                fontSize:14,color:"var(--w50)",textDecoration:"underline",
+                fontSize:17,color:"var(--w50)",textDecoration:"underline",
                 fontFamily:"inherit",minHeight:"unset"}}>
               Back
             </button>
@@ -500,7 +500,7 @@ function PaywallScreen({ onUnlocked }) {
         {err && (
           <div style={{marginTop:16,padding:"11px 13px",borderRadius:"var(--r)",
             background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.35)",
-            maxWidth:360,fontSize:14,color:"rgba(255,190,190,.92)",lineHeight:1.45}}>
+            maxWidth:360,fontSize:17,color:"rgba(255,190,190,.92)",lineHeight:1.45}}>
             {err}
           </div>
         )}
@@ -522,9 +522,9 @@ function TrialBanner({ trial, onBuy }) {
       <BC c={urgent
               ? `TRIAL · ${trial.hoursLeft} HOUR${trial.hoursLeft===1?"":"S"} LEFT`
               : `TRIAL · ${trial.daysLeft} DAYS LEFT`}
-        s={{fontSize:13,fontWeight:900,letterSpacing:".1em",
+        s={{fontSize:16,fontWeight:900,letterSpacing:".1em",
           color: urgent ? "#ef4444" : "var(--cop)"}}/>
-      <BC c={`Unlock ${PRICE_LABEL} →`} s={{fontSize:14,fontWeight:800,
+      <BC c={`Unlock ${PRICE_LABEL} →`} s={{fontSize:17,fontWeight:800,
         color: urgent ? "#ef4444" : "var(--cop)"}}/>
     </button>
   );
@@ -620,17 +620,17 @@ export default function App() {
           <BC c="POCKET PLUMBER™" s={{fontSize:27,fontWeight:900,
             letterSpacing:".03em",color:"var(--wht)",marginBottom:8}}/>
           <BC c="A contractor-grade field reference" s={{
-            fontSize:15,fontWeight:700,
+            fontSize:18,fontWeight:700,
             color:"rgba(240,235,224,.4)",marginBottom:28,letterSpacing:".02em"}}/>
           {ONBOARD_FEATURES.map(f=>(
             <div key={f.title} style={{
               display:"flex",gap:14,alignItems:"flex-start",
               marginBottom:16,width:"100%",maxWidth:360,
             }}>
-              <div style={{fontSize:22,flexShrink:0,marginTop:2}}>{f.icon}</div>
+              <div style={{fontSize:24,flexShrink:0,marginTop:2}}>{f.icon}</div>
               <div>
-                <BC c={f.title} s={{fontSize:16,fontWeight:900,display:"block",marginBottom:3}}/>
-                <div style={{fontSize:15,color:"var(--w50)",lineHeight:1.45}}>{f.body}</div>
+                <BC c={f.title} s={{fontSize:19,fontWeight:900,display:"block",marginBottom:3}}/>
+                <div style={{fontSize:18,color:"var(--w50)",lineHeight:1.45}}>{f.body}</div>
               </div>
             </div>
           ))}
@@ -638,12 +638,12 @@ export default function App() {
             marginTop:12,padding:"14px 48px",borderRadius:"var(--r)",
             background:"var(--cop)",cursor:"pointer",
             fontFamily:"'Barlow Condensed',sans-serif",
-            fontSize:21,fontWeight:800,letterSpacing:".08em",
+            fontSize:23,fontWeight:800,letterSpacing:".08em",
             color:"var(--blk)",
           }}>
             GET STARTED
           </div>
-          <div style={{fontSize:13,color:"var(--w25)",marginTop:10,letterSpacing:".06em"}}>
+          <div style={{fontSize:16,color:"var(--w25)",marginTop:10,letterSpacing:".06em"}}>
             Tap anywhere to continue
           </div>
         </div>
@@ -737,7 +737,7 @@ function NavBar({active, navigate}) {
             }}>
             <NavIcon id={t.id} active={isActive}/>
             <span style={{
-              fontSize:15,
+              fontSize:18,
               fontWeight:800,
               letterSpacing:".06em",
               color: isActive ? "var(--cop)" : "var(--w40)",
@@ -828,7 +828,7 @@ function ReferenceScreen({screen, navigate}) {
             <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{
               padding:"7px 14px",borderRadius:"6px",whiteSpace:"nowrap",minHeight:"unset",
               fontFamily:"'Barlow Condensed',sans-serif",
-              fontWeight:900,fontSize:16,letterSpacing:".04em",
+              fontWeight:900,fontSize:19,letterSpacing:".04em",
               cursor:"pointer",
               background:activeTab===t.id?"var(--cop)":"var(--blk3)",
               color:activeTab===t.id?"var(--blk)":"var(--w50)",
@@ -847,7 +847,7 @@ function ReferenceScreen({screen, navigate}) {
             <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
               border:"1px solid var(--bdr2)",borderLeft:"4px solid var(--yel)",
               padding:"10px 14px",marginBottom:10}}>
-              <BC c="String method" s={{fontSize:16,fontWeight:900,
+              <BC c="String method" s={{fontSize:19,fontWeight:900,
                 display:"block",marginBottom:8,color:"var(--yel)"}}/>
               {[
                 ["01","Wrap a string snugly around the pipe one full revolution"],
@@ -856,7 +856,7 @@ function ReferenceScreen({screen, navigate}) {
                 ["04","Enter that measurement below"],
               ].map(([n,t])=>(
                 <div key={n} style={{display:"flex",gap:10,marginBottom:6}}>
-                  <Mono c={n} s={{fontSize:14,color:"var(--yel)",flexShrink:0,paddingTop:1}}/>
+                  <Mono c={n} s={{fontSize:17,color:"var(--yel)",flexShrink:0,paddingTop:1}}/>
                   <div className="body-text">{t}</div>
                 </div>
               ))}
@@ -866,7 +866,7 @@ function ReferenceScreen({screen, navigate}) {
             <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
               border:"1px solid var(--bdr2)",padding:"12px",marginBottom:10}}>
               <BC c="Enter circumference (string length)"
-                s={{fontSize:14,fontWeight:800,color:"var(--w50)",
+                s={{fontSize:17,fontWeight:800,color:"var(--w50)",
                   letterSpacing:".1em",textTransform:"uppercase",
                   display:"block",marginBottom:12}}/>
               <div style={{display:"flex",gap:6,marginBottom:12}}>
@@ -877,7 +877,7 @@ function ReferenceScreen({screen, navigate}) {
                     border:"1px solid " + (unit===u?"var(--grn)":"var(--bdr2)"),
                     color:unit===u?"#0c0c0c":"var(--w50)",
                     fontFamily:"'Barlow Condensed',sans-serif",
-                    fontWeight:800,fontSize:15,letterSpacing:".06em",
+                    fontWeight:800,fontSize:18,letterSpacing:".06em",
                     minHeight:"unset",
                   }}>{u==="in"?"INCHES":"MILLIMETERS"}</button>
                 ))}
@@ -890,10 +890,10 @@ function ReferenceScreen({screen, navigate}) {
                   onChange={e=>setCircumVal(e.target.value)}
                   style={{flex:1,padding:"10px 12px",borderRadius:"var(--r)",
                     background:"var(--blk3)",border:"1px solid var(--bdr2)",
-                    color:"var(--wht)",fontSize:20,fontWeight:500,outline:"none",
+                    color:"var(--wht)",fontSize:22,fontWeight:500,outline:"none",
                     fontFamily:"'JetBrains Mono',monospace"}}
                 />
-                <BC c={unit} s={{fontSize:16,fontWeight:800,color:"var(--w50)"}}/>
+                <BC c={unit} s={{fontSize:19,fontWeight:800,color:"var(--w50)"}}/>
               </div>
             </div>
 
@@ -903,7 +903,7 @@ function ReferenceScreen({screen, navigate}) {
                 <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
                   border:"1px solid var(--bdr2)",borderLeft:"4px solid var(--grn)",
                   padding:"16px 18px"}}>
-                  <BC c="Calculated OD" s={{fontSize:14,fontWeight:800,
+                  <BC c="Calculated OD" s={{fontSize:17,fontWeight:800,
                     color:"var(--w50)",letterSpacing:".12em",
                     textTransform:"uppercase",display:"block",marginBottom:10}}/>
                   <div style={{display:"flex",alignItems:"flex-end",
@@ -913,12 +913,12 @@ function ReferenceScreen({screen, navigate}) {
                         color:"var(--wht)",letterSpacing:"-.01em",lineHeight:1}}/>
                       <BC c=" mm" s={{fontSize:24,fontWeight:700,color:"var(--w50)"}}/>
                       <Mono c={`${od_in.toFixed(4)}"`}
-                        s={{fontSize:16,color:"var(--w50)",marginTop:6,display:"block"}}/>
+                        s={{fontSize:19,color:"var(--w50)",marginTop:6,display:"block"}}/>
                       <Mono c={`C ÷ π  =  ${circ} ${unit} ÷ 3.14159`}
-                        s={{fontSize:14,color:"var(--w25)",marginTop:4,display:"block"}}/>
+                        s={{fontSize:17,color:"var(--w25)",marginTop:4,display:"block"}}/>
                     </div>
                     <div style={{textAlign:"right"}}>
-                      <BC c="NOMINAL" s={{fontSize:14,fontWeight:700,color:"var(--w50)",
+                      <BC c="NOMINAL" s={{fontSize:17,fontWeight:700,color:"var(--w50)",
                         letterSpacing:".1em",display:"block",marginBottom:4}}/>
                       <BC c={best?.nominal||"—"}
                         s={{fontSize:38,fontWeight:900,color:"var(--cop)",lineHeight:1}}/>
@@ -930,7 +930,7 @@ function ReferenceScreen({screen, navigate}) {
                   <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
                     border:"1px solid var(--bdr2)",overflow:"hidden"}}>
                     <div style={{padding:"9px 14px 5px"}}>
-                      <BC c="Nearest pipe OD" s={{fontSize:14,fontWeight:800,
+                      <BC c="Nearest pipe OD" s={{fontSize:17,fontWeight:800,
                         color:"var(--w50)",letterSpacing:".12em",textTransform:"uppercase"}}/>
                     </div>
                     {matches.map((m,i)=>{
@@ -944,15 +944,15 @@ function ReferenceScreen({screen, navigate}) {
                           <div>
                             <BC c={m.nominal} s={{fontSize:26,fontWeight:900,
                               color:i===0?"var(--wht)":"var(--w50)"}}/>
-                            <div style={{fontSize:15,marginTop:2,
+                            <div style={{fontSize:18,marginTop:2,
                               color:i===0?"var(--w80)":"var(--w50)"}}>{m.material}</div>
                             <Mono c={`OD: ${m.od}" · ${(m.od*25.4).toFixed(1)}mm`}
-                              s={{fontSize:15,color:"var(--w50)",marginTop:2,display:"block"}}/>
+                              s={{fontSize:18,color:"var(--w50)",marginTop:2,display:"block"}}/>
                           </div>
                           <div style={{textAlign:"right"}}>
-                            <Mono c={`Δ ${d.toFixed(1)}mm`} s={{fontSize:16,color:dc}}/>
+                            <Mono c={`Δ ${d.toFixed(1)}mm`} s={{fontSize:19,color:dc}}/>
                             <Mono c={`C = ${(m.od*Math.PI).toFixed(3)}"`}
-                              s={{fontSize:14,color:"var(--w25)",display:"block",marginTop:3}}/>
+                              s={{fontSize:17,color:"var(--w25)",display:"block",marginTop:3}}/>
                           </div>
                         </div>
                       );
@@ -963,9 +963,9 @@ function ReferenceScreen({screen, navigate}) {
                 <div style={{padding:"10px 14px",borderRadius:"var(--r)",
                   background:"rgba(245,197,24,.06)",
                   border:"1px solid rgba(245,197,24,.2)"}}>
-                  <BC c="Tip" s={{fontSize:15,fontWeight:800,color:"var(--yel)",
+                  <BC c="Tip" s={{fontSize:18,fontWeight:800,color:"var(--yel)",
                     display:"block",marginBottom:4}}/>
-                  <div style={{fontSize:15,color:"var(--w50)",lineHeight:1.6}}>
+                  <div style={{fontSize:18,color:"var(--w50)",lineHeight:1.6}}>
                     Pull the string snug but not stretched. Measure with a steel rule.
                     A string through a coupling recess gives true OD.
                   </div>
@@ -976,7 +976,7 @@ function ReferenceScreen({screen, navigate}) {
             {/* Reference chart */}
             <div style={{marginTop:20}}>
               <BC c="Circumference reference chart"
-                s={{fontSize:14,fontWeight:800,color:"var(--w50)",letterSpacing:".12em",
+                s={{fontSize:17,fontWeight:800,color:"var(--w50)",letterSpacing:".12em",
                   textTransform:"uppercase",display:"block",marginBottom:10}}/>
               <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
                 border:"1px solid var(--bdr2)",overflow:"hidden"}}>
@@ -984,7 +984,7 @@ function ReferenceScreen({screen, navigate}) {
                   padding:"9px 12px",background:"var(--blk3)",
                   borderBottom:"2px solid var(--cop)"}}>
                   {["Nom.","Material","C (in)","C (mm)"].map(h=>(
-                    <BC key={h} c={h} s={{fontSize:14,fontWeight:800,
+                    <BC key={h} c={h} s={{fontSize:17,fontWeight:800,
                       color:"var(--w50)",letterSpacing:".07em",textTransform:"uppercase"}}/>
                   ))}
                 </div>
@@ -996,16 +996,16 @@ function ReferenceScreen({screen, navigate}) {
                       borderTop:"1px solid var(--bdr)",cursor:"pointer",
                       background:i%2===0?"var(--blk2)":"var(--blk3)",
                       transition:"background .1s"}}>
-                    <BC c={e.nominal} s={{fontSize:17,fontWeight:900}}/>
-                    <div style={{fontSize:15,color:"var(--w80)",
+                    <BC c={e.nominal} s={{fontSize:20,fontWeight:900}}/>
+                    <div style={{fontSize:18,color:"var(--w80)",
                       whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
                       paddingRight:4}}>{e.material}</div>
-                    <Mono c={`${e.circ_in}"`} s={{fontSize:15,color:"var(--yel)"}}/>
-                    <Mono c={`${e.circ_mm}`} s={{fontSize:15,color:"var(--yel)"}}/>
+                    <Mono c={`${e.circ_in}"`} s={{fontSize:18,color:"var(--yel)"}}/>
+                    <Mono c={`${e.circ_mm}`} s={{fontSize:18,color:"var(--yel)"}}/>
                   </div>
                 ))}
               </div>
-              <div style={{fontSize:15,color:"var(--w25)",marginTop:8,textAlign:"center"}}>
+              <div style={{fontSize:18,color:"var(--w25)",marginTop:8,textAlign:"center"}}>
                 Tap any row to load into calculator
               </div>
             </div>
@@ -1017,13 +1017,13 @@ function ReferenceScreen({screen, navigate}) {
               <div style={{width:40,height:40,borderRadius:"50%",
                 background:"rgba(34,197,94,.12)",border:"2px solid var(--grn)",
                 display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <BC c="25¢" s={{fontSize:15,fontWeight:900,color:"var(--grn)"}}/>
+                <BC c="25¢" s={{fontSize:18,fontWeight:900,color:"var(--grn)"}}/>
               </div>
               <div>
                 <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:2}}>
-                  <Mono c='0.9550"' s={{fontSize:18,fontWeight:700,color:"var(--grn)"}}/>
-                  <BC c="= US Quarter OD" s={{fontSize:14,fontWeight:700,color:"var(--w50)"}}/>
-                  <Mono c="(24.26mm)" s={{fontSize:13,color:"var(--w25)"}}/>
+                  <Mono c='0.9550"' s={{fontSize:20,fontWeight:700,color:"var(--grn)"}}/>
+                  <BC c="= US Quarter OD" s={{fontSize:17,fontWeight:700,color:"var(--w50)"}}/>
+                  <Mono c="(24.26mm)" s={{fontSize:16,color:"var(--w25)"}}/>
                 </div>
                 <div className="body-muted">
                   Top-down: rest on pipe · End view: place beside cut end
@@ -1038,8 +1038,8 @@ function ReferenceScreen({screen, navigate}) {
             <div style={{padding:"10px 14px",borderRadius:"var(--r)",
               background:"rgba(239,68,68,.1)",border:"2px solid #ef4444",marginBottom:16}}>
               <BC c="⚠ Dangerous, Recalled & Discontinued Pipe"
-                s={{fontSize:17,fontWeight:900,color:"#ef4444",display:"block",marginBottom:4}}/>
-              <div style={{fontSize:15,color:"rgba(255,200,200,.8)",lineHeight:1.5}}>
+                s={{fontSize:20,fontWeight:900,color:"#ef4444",display:"block",marginBottom:4}}/>
+              <div style={{fontSize:18,color:"rgba(255,200,200,.8)",lineHeight:1.5}}>
                 These pipe types require special handling, immediate notification, or qualified professionals only.
                 Tap any entry for full details and required actions.
               </div>
@@ -1056,9 +1056,9 @@ function ReferenceScreen({screen, navigate}) {
             <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
               border:"1px solid var(--bdr2)",borderLeft:"4px solid var(--redhi)",
               padding:"12px 16px",marginBottom:16}}>
-              <BC c="Critical: wrong cement = failed joint" s={{fontSize:16,fontWeight:900,
+              <BC c="Critical: wrong cement = failed joint" s={{fontSize:19,fontWeight:900,
                 color:"var(--redhi)",display:"block",marginBottom:4}}/>
-              <div style={{fontSize:16,color:"var(--w50)",lineHeight:1.5}}>
+              <div style={{fontSize:19,color:"var(--w50)",lineHeight:1.5}}>
                 PVC and CPVC cements are NOT interchangeable. Always verify material before applying solvent.
                 Tap any pipe type below to expand full instructions.
               </div>
@@ -1077,7 +1077,7 @@ function ReferenceScreen({screen, navigate}) {
           <>
 
             <BC c="All pipe ODs — sorted by outside diameter"
-              s={{fontSize:14,fontWeight:800,color:"var(--w50)",letterSpacing:".12em",
+              s={{fontSize:17,fontWeight:800,color:"var(--w50)",letterSpacing:".12em",
                 textTransform:"uppercase",display:"block",marginBottom:10}}/>
             <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
               border:"1px solid var(--bdr2)",overflow:"hidden"}}>
@@ -1085,7 +1085,7 @@ function ReferenceScreen({screen, navigate}) {
                 padding:"9px 14px",background:"var(--blk3)",
                 borderBottom:"2px solid var(--cop)"}}>
                 {[["Nom.",""],["Material",""],['OD (in)"',"var(--grn)"],["mm","var(--w50)"]].map(([h,c])=>(
-                  <BC key={h} c={h} s={{fontSize:13,fontWeight:800,
+                  <BC key={h} c={h} s={{fontSize:16,fontWeight:800,
                     color:c||"var(--w50)",letterSpacing:".08em",textTransform:"uppercase"}}/>
                 ))}
               </div>
@@ -1093,17 +1093,17 @@ function ReferenceScreen({screen, navigate}) {
                 <div key={i} style={{display:"grid",gridTemplateColumns:"52px 1fr 72px 64px",
                   padding:"10px 14px",alignItems:"center",borderTop:"1px solid var(--bdr)",
                   background:e.hazmat?"rgba(204,32,32,.05)":i%2===0?"var(--blk2)":"var(--blk3)"}}>
-                  <BC c={e.nominal} s={{fontSize:18,fontWeight:900}}/>
+                  <BC c={e.nominal} s={{fontSize:20,fontWeight:900}}/>
                   <div>
-                    <span style={{fontSize:14,
+                    <span style={{fontSize:17,
                       color:e.hazmat?"rgba(255,130,130,.9)":"var(--w80)"}}>{e.material}</span>
-                    {e.hazmat && <BC c=" ⚠" s={{fontSize:14,color:"var(--redhi)"}}/>}
+                    {e.hazmat && <BC c=" ⚠" s={{fontSize:17,color:"var(--redhi)"}}/>}
                   </div>
                   <div>
-                    <Mono c={`${e.od}"`} s={{fontSize:15,fontWeight:700,color:"var(--grn)"}}/>
+                    <Mono c={`${e.od}"`} s={{fontSize:18,fontWeight:700,color:"var(--grn)"}}/>
                   </div>
                   <div>
-                    <Mono c={`${(e.od*25.4).toFixed(1)}`} s={{fontSize:14,color:"var(--w50)"}}/>
+                    <Mono c={`${(e.od*25.4).toFixed(1)}`} s={{fontSize:17,color:"var(--w50)"}}/>
                   </div>
                 </div>
               ))}
@@ -1417,20 +1417,20 @@ function SolventCard({entry}) {
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{width:14,height:14,borderRadius:"50%",
             background:entry.color,border:`2px solid ${ac}`,flexShrink:0}}/>
-          <BC c={entry.material} s={{fontSize:20,fontWeight:900,color:"var(--wht)"}}/>
+          <BC c={entry.material} s={{fontSize:22,fontWeight:900,color:"var(--wht)"}}/>
           <Mono c={entry.primer.required?"PRIMER REQ.":"NO PRIMER"}
-            s={{fontSize:14,padding:"2px 7px",borderRadius:2,
+            s={{fontSize:17,padding:"2px 7px",borderRadius:2,
               background:entry.primer.required?"rgba(245,197,24,.15)":"rgba(34,197,94,.12)",
               color:entry.primer.required?"var(--yel)":"var(--grn)",
               border:`1px solid ${entry.primer.required?"rgba(245,197,24,.3)":"rgba(34,197,94,.25)"}`}}/>
         </div>
-        <BC c={open?"▲":"▼"} s={{fontSize:15,color:"var(--w50)"}}/>
+        <BC c={open?"▲":"▼"} s={{fontSize:18,color:"var(--w50)"}}/>
       </button>
 
       {/* Summary row — always visible */}
       <div style={{padding:"0 16px 12px",display:"flex",gap:8,flexWrap:"wrap"}}>
         <Mono c={entry.cement.product.split("(")[0].trim()}
-          s={{fontSize:15,color:"var(--w50)",lineHeight:1.4}}/>
+          s={{fontSize:18,color:"var(--w50)",lineHeight:1.4}}/>
       </div>
 
       {/* Expanded detail */}
@@ -1441,11 +1441,11 @@ function SolventCard({entry}) {
           {/* Primer */}
           <div>
             <BC c="Primer / Surface prep"
-              s={{fontSize:14,fontWeight:800,color:ac,letterSpacing:".1em",
+              s={{fontSize:17,fontWeight:800,color:ac,letterSpacing:".1em",
                 textTransform:"uppercase",display:"block",marginBottom:8}}/>
             <div style={{background:"var(--blk3)",borderRadius:"var(--r)",
               padding:"10px 12px"}}>
-              <div style={{fontSize:16,fontWeight:600,color:"var(--wht)",marginBottom:4}}>
+              <div style={{fontSize:19,fontWeight:600,color:"var(--wht)",marginBottom:4}}>
                 {entry.primer.product}
               </div>
               <div className="body-muted">
@@ -1453,8 +1453,8 @@ function SolventCard({entry}) {
               </div>
               {entry.primer.color_code!=="N/A"&&(
                 <div style={{marginTop:6,display:"inline-flex",alignItems:"center",gap:6}}>
-                  <BC c="COLOR:" s={{fontSize:14,fontWeight:800,color:"var(--w25)",letterSpacing:".08em"}}/>
-                  <BC c={entry.primer.color_code} s={{fontSize:15,fontWeight:700,color:ac}}/>
+                  <BC c="COLOR:" s={{fontSize:17,fontWeight:800,color:"var(--w25)",letterSpacing:".08em"}}/>
+                  <BC c={entry.primer.color_code} s={{fontSize:18,fontWeight:700,color:ac}}/>
                 </div>
               )}
             </div>
@@ -1463,24 +1463,24 @@ function SolventCard({entry}) {
           {/* Cement / joining method */}
           <div>
             <BC c="Cement / Joining method"
-              s={{fontSize:14,fontWeight:800,color:ac,letterSpacing:".1em",
+              s={{fontSize:17,fontWeight:800,color:ac,letterSpacing:".1em",
                 textTransform:"uppercase",display:"block",marginBottom:8}}/>
             <div style={{background:"var(--blk3)",borderRadius:"var(--r)",
               padding:"10px 12px",display:"flex",flexDirection:"column",gap:6}}>
-              <div style={{fontSize:16,fontWeight:600,color:"var(--wht)"}}>
+              <div style={{fontSize:19,fontWeight:600,color:"var(--wht)"}}>
                 {entry.cement.product}
               </div>
-              <div style={{fontSize:15,color:"var(--w50)"}}>{entry.cement.body}</div>
+              <div style={{fontSize:18,color:"var(--w50)"}}>{entry.cement.body}</div>
               <div style={{display:"flex",gap:16,flexWrap:"wrap",marginTop:2}}>
                 {entry.cement.color_code!=="N/A"&&(
                   <div>
-                    <BC c="COLOR: " s={{fontSize:14,fontWeight:800,color:"var(--w25)",letterSpacing:".06em"}}/>
-                    <BC c={entry.cement.color_code} s={{fontSize:15,fontWeight:700,color:ac}}/>
+                    <BC c="COLOR: " s={{fontSize:17,fontWeight:800,color:"var(--w25)",letterSpacing:".06em"}}/>
+                    <BC c={entry.cement.color_code} s={{fontSize:18,fontWeight:700,color:ac}}/>
                   </div>
                 )}
                 <div>
-                  <BC c="TEMP: " s={{fontSize:14,fontWeight:800,color:"var(--w25)",letterSpacing:".06em"}}/>
-                  <Mono c={entry.cement.temp_range} s={{fontSize:14,color:"var(--w50)"}}/>
+                  <BC c="TEMP: " s={{fontSize:17,fontWeight:800,color:"var(--w25)",letterSpacing:".06em"}}/>
+                  <Mono c={entry.cement.temp_range} s={{fontSize:17,color:"var(--w50)"}}/>
                 </div>
               </div>
             </div>
@@ -1489,14 +1489,14 @@ function SolventCard({entry}) {
           {/* Application steps */}
           <div>
             <BC c="Application steps"
-              s={{fontSize:14,fontWeight:800,color:ac,letterSpacing:".1em",
+              s={{fontSize:17,fontWeight:800,color:ac,letterSpacing:".1em",
                 textTransform:"uppercase",display:"block",marginBottom:8}}/>
             <div style={{display:"flex",flexDirection:"column",gap:5}}>
               {entry.application.map((step,i)=>(
                 <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",
                   background:"var(--blk3)",borderRadius:"var(--r)",padding:"8px 10px"}}>
                   <BC c={String(i+1).padStart(2,"0")}
-                    s={{fontSize:15,fontWeight:900,color:ac,flexShrink:0,paddingTop:1}}/>
+                    s={{fontSize:18,fontWeight:900,color:ac,flexShrink:0,paddingTop:1}}/>
                   <div className="body-text">{step}</div>
                 </div>
               ))}
@@ -1506,23 +1506,23 @@ function SolventCard({entry}) {
           {/* Set + cure times */}
           <div>
             <BC c="Set & Cure time"
-              s={{fontSize:14,fontWeight:800,color:ac,letterSpacing:".1em",
+              s={{fontSize:17,fontWeight:800,color:ac,letterSpacing:".1em",
                 textTransform:"uppercase",display:"block",marginBottom:8}}/>
             <div style={{background:"var(--blk3)",borderRadius:"var(--r)",
               padding:"10px 12px",display:"flex",flexDirection:"column",gap:6}}>
               <div style={{display:"flex",gap:8,alignItems:"baseline"}}>
-                <BC c="Initial set:" s={{fontSize:14,fontWeight:800,color:"var(--w25)",
+                <BC c="Initial set:" s={{fontSize:17,fontWeight:800,color:"var(--w25)",
                   letterSpacing:".06em",whiteSpace:"nowrap"}}/>
-                <Mono c={entry.set_time} s={{fontSize:15,color:"var(--yel)"}}/>
+                <Mono c={entry.set_time} s={{fontSize:18,color:"var(--yel)"}}/>
               </div>
               {Object.entries(entry.cure_time).map(([size,time])=>(
                 <div key={size} style={{display:"flex",gap:8,alignItems:"baseline",
                   flexWrap:"wrap"}}>
-                  <Mono c={size} s={{fontSize:14,color:ac,flexShrink:0}}/>
-                  <Mono c={"→ "+time} s={{fontSize:15,color:"var(--w50)"}}/>
+                  <Mono c={size} s={{fontSize:17,color:ac,flexShrink:0}}/>
+                  <Mono c={"→ "+time} s={{fontSize:18,color:"var(--w50)"}}/>
                 </div>
               ))}
-              <div style={{fontSize:15,color:"rgba(245,197,24,.8)",marginTop:4,
+              <div style={{fontSize:18,color:"rgba(245,197,24,.8)",marginTop:4,
                 borderTop:"1px solid var(--bdr)",paddingTop:6}}>
                 {entry.pressure_test}
               </div>
@@ -1532,15 +1532,15 @@ function SolventCard({entry}) {
           {/* Warnings */}
           <div>
             <BC c="Warnings & Notes"
-              s={{fontSize:14,fontWeight:800,color:"var(--redhi)",letterSpacing:".1em",
+              s={{fontSize:17,fontWeight:800,color:"var(--redhi)",letterSpacing:".1em",
                 textTransform:"uppercase",display:"block",marginBottom:8}}/>
             <div style={{display:"flex",flexDirection:"column",gap:5}}>
               {entry.warnings.map((w,i)=>(
                 <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",
                   background:"rgba(204,32,32,.08)",borderRadius:"var(--r)",
                   border:"1px solid rgba(204,32,32,.2)",padding:"8px 10px"}}>
-                  <BC c="⚠" s={{fontSize:15,flexShrink:0,color:"var(--redhi)"}}/>
-                  <div style={{fontSize:15,color:"rgba(255,180,180,.85)",lineHeight:1.5}}>{w}</div>
+                  <BC c="⚠" s={{fontSize:18,flexShrink:0,color:"var(--redhi)"}}/>
+                  <div style={{fontSize:18,color:"rgba(255,180,180,.85)",lineHeight:1.5}}>{w}</div>
                 </div>
               ))}
             </div>
@@ -1548,7 +1548,7 @@ function SolventCard({entry}) {
 
           {/* Standard */}
           <Mono c={entry.standard}
-            s={{fontSize:14,color:"var(--w25)",textAlign:"right"}}/>
+            s={{fontSize:17,color:"var(--w25)",textAlign:"right"}}/>
         </div>
       )}
     </div>
@@ -1567,16 +1567,16 @@ function DangerRefCard({danger, lvl}) {
         display:"flex",alignItems:"center",justifyContent:"space-between",
         background:"none",textAlign:"left"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:22,flexShrink:0}}>{lvl.icon}</span>
+          <span style={{fontSize:24,flexShrink:0}}>{lvl.icon}</span>
           <div>
-            <BC c={danger.material} s={{fontSize:18,fontWeight:900,color:"var(--wht)",display:"block"}}/>
-            <div style={{fontSize:14,fontFamily:"'JetBrains Mono',monospace",
+            <BC c={danger.material} s={{fontSize:20,fontWeight:900,color:"var(--wht)",display:"block"}}/>
+            <div style={{fontSize:17,fontFamily:"'JetBrains Mono',monospace",
               color:lvl.color,marginTop:2,letterSpacing:".06em",fontWeight:700}}>
               {lvl.label}
             </div>
           </div>
         </div>
-        <BC c={open?"▲":"▼"} s={{fontSize:15,color:"var(--w50)",flexShrink:0}}/>
+        <BC c={open?"▲":"▼"} s={{fontSize:18,color:"var(--w50)",flexShrink:0}}/>
       </button>
       {open&&(
         <div style={{borderTop:`1px solid ${lvl.border}`,
@@ -1587,25 +1587,25 @@ function DangerRefCard({danger, lvl}) {
           </div>
           <div style={{padding:"10px 12px",background:"var(--blk3)",
             borderRadius:"var(--r)",border:`1px solid ${lvl.border}`}}>
-            <BC c="Why dangerous" s={{fontSize:14,fontWeight:800,color:lvl.color,
+            <BC c="Why dangerous" s={{fontSize:17,fontWeight:800,color:lvl.color,
               letterSpacing:".1em",textTransform:"uppercase",display:"block",marginBottom:5}}/>
             <div className="body-text">{danger.why_dangerous}</div>
           </div>
           {danger.emergency&&(
             <div style={{padding:"10px 12px",background:"rgba(239,68,68,.12)",
               borderRadius:"var(--r)",border:"1px solid rgba(239,68,68,.4)"}}>
-              <BC c={danger.emergency} s={{fontSize:16,fontWeight:900,color:"#ef4444"}}/>
+              <BC c={danger.emergency} s={{fontSize:19,fontWeight:900,color:"#ef4444"}}/>
             </div>
           )}
           <div>
-            <BC c="Required actions" s={{fontSize:14,fontWeight:800,color:lvl.color,
+            <BC c="Required actions" s={{fontSize:17,fontWeight:800,color:lvl.color,
               letterSpacing:".1em",textTransform:"uppercase",display:"block",marginBottom:6}}/>
             {danger.action.map((a,i)=>(
               <div key={i} style={{display:"flex",gap:8,padding:"7px 10px",
                 background:"var(--blk3)",borderRadius:"var(--r)",
                 marginBottom:4,alignItems:"flex-start"}}>
                 <BC c={String(i+1).padStart(2,"0")}
-                  s={{fontSize:14,fontWeight:900,color:lvl.color,flexShrink:0,paddingTop:1}}/>
+                  s={{fontSize:17,fontWeight:900,color:lvl.color,flexShrink:0,paddingTop:1}}/>
                 <div className="body-text">{a}</div>
               </div>
             ))}
@@ -1614,11 +1614,11 @@ function DangerRefCard({danger, lvl}) {
             <div style={{padding:"8px 12px",borderRadius:"var(--r)",
               background:"rgba(245,158,11,.08)",
               border:"1px solid rgba(245,158,11,.3)"}}>
-              <BC c="Notify: " s={{fontSize:15,fontWeight:800,color:"var(--yel)"}}/>
-              <span style={{fontSize:15,color:"rgba(255,220,100,.8)"}}>{danger.notify}</span>
+              <BC c="Notify: " s={{fontSize:18,fontWeight:800,color:"var(--yel)"}}/>
+              <span style={{fontSize:18,color:"rgba(255,220,100,.8)"}}>{danger.notify}</span>
             </div>
           )}
-          <div style={{fontSize:14,fontFamily:"'JetBrains Mono',monospace",
+          <div style={{fontSize:17,fontFamily:"'JetBrains Mono',monospace",
             color:"var(--w25)",textAlign:"right"}}>{danger.id_tips}</div>
         </div>
       )}
@@ -1631,6 +1631,22 @@ function DangerRefCard({danger, lvl}) {
    Trade knowledge most people don't know.
 ═══════════════════════════════════════════════════════════ */
 const PRO_TIPS = [
+
+  {
+    cat:"solvent", catLabel:"Solvent & Joining",
+    title:"Never thread metal into plastic — and skip the male adapter entirely",
+    short:"Metal into plastic splits the plastic. And molded male adapters are the weakest fitting you can buy.",
+    body:`Two separate problems, one better answer.
+
+**Metal into plastic will fail.** A metal male thread driven into a plastic female fitting acts like a wedge. Metal does not yield, plastic does. Every temperature cycle and every ounce of overtightening drives the taper deeper until the socket splits. It may pass the pressure test and hold for a year — then let go inside a wall. If you have to join metal to plastic, put the METAL on the female side and the PLASTIC on the male side, so the plastic is being compressed rather than wedged apart.
+
+**Molded male adapters are weak.** The threaded end of a standard PVC or CPVC male adapter is thin-walled by design — the threads are cut into a Schedule 40 wall, which leaves very little material at the root of the thread. That is the first thing to crack on a horizontal run, where the fitting carries the pipe's weight plus anything hanging off it.
+
+**The stronger build.** Take a Schedule 80 threaded nipple and cut it in half. Solvent weld the cut end into a socket coupling. You now have a socket-by-thread fitting where the threaded portion is Schedule 80 wall instead of Schedule 40 — substantially more material at the thread root, and a glued socket joint doing the structural work instead of a molded shoulder.
+
+This is worth the extra two minutes on any horizontal run, anything carrying weight, anything in a wall, and anywhere a failure means opening drywall.`,
+    example:'Sch 80 nipple cut in half + solvent welded into a coupling = far stronger than a molded male adapter. Metal male into plastic female is the joint that fails a year later.',
+  },
 
   /* ── PIPE SIZING ── */
   {
@@ -2021,7 +2037,7 @@ function ProTipsTab() {
         border:"1px solid var(--bdr2)",borderLeft:"4px solid var(--yel)",
         padding:"12px 14px",marginBottom:16}}>
         <BC c="Trade knowledge most people don't know"
-          s={{fontSize:16,fontWeight:900,color:"var(--yel)",display:"block",marginBottom:4}}/>
+          s={{fontSize:19,fontWeight:900,color:"var(--yel)",display:"block",marginBottom:4}}/>
         <div className="body-muted">
           {PRO_TIPS.length} tips across {TIP_CATS.length} categories. Tap any card to expand.
         </div>
@@ -2030,7 +2046,7 @@ function ProTipsTab() {
       {/* Category filter */}
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
         <button onClick={()=>setActiveCat("all")} style={{
-          padding:"5px 11px",borderRadius:20,fontSize:14,cursor:"pointer",
+          padding:"5px 11px",borderRadius:20,fontSize:17,cursor:"pointer",
           fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,letterSpacing:".06em",
           background:activeCat==="all"?"var(--wht)":"var(--blk3)",
           color:activeCat==="all"?"var(--blk)":"var(--w50)",
@@ -2038,7 +2054,7 @@ function ProTipsTab() {
         }}>ALL</button>
         {TIP_CATS.map(c=>(
           <button key={c.id} onClick={()=>setActiveCat(c.id)} style={{
-            padding:"5px 11px",borderRadius:20,fontSize:14,cursor:"pointer",
+            padding:"5px 11px",borderRadius:20,fontSize:17,cursor:"pointer",
             fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,letterSpacing:".06em",
             background:activeCat===c.id?c.color+"22":"var(--blk3)",
             color:activeCat===c.id?c.color:"var(--w50)",
@@ -2066,21 +2082,21 @@ function ProTipsTab() {
               gap:12,background:"none",textAlign:"left",cursor:"pointer",
             }}>
               <div style={{flex:1}}>
-                <div style={{fontSize:14,fontFamily:"'JetBrains Mono',monospace",
+                <div style={{fontSize:17,fontFamily:"'JetBrains Mono',monospace",
                   color:cat.color,letterSpacing:".08em",fontWeight:700,
                   textTransform:"uppercase",marginBottom:5}}>
                   {cat.label}
                 </div>
-                <BC c={tip.title} s={{fontSize:17,fontWeight:800,
+                <BC c={tip.title} s={{fontSize:20,fontWeight:800,
                   color:"var(--wht)",display:"block",lineHeight:1.3,marginBottom:4}}/>
                 {!isOpen&&(
-                  <div style={{fontSize:15,color:"var(--w50)",lineHeight:1.4}}>
+                  <div style={{fontSize:18,color:"var(--w50)",lineHeight:1.4}}>
                     {tip.short}
                   </div>
                 )}
               </div>
               <BC c={isOpen?"▲":"▼"}
-                s={{fontSize:15,color:"var(--w50)",flexShrink:0,paddingTop:2}}/>
+                s={{fontSize:18,color:"var(--w50)",flexShrink:0,paddingTop:2}}/>
             </button>
 
             {/* Expanded content */}
@@ -2089,7 +2105,7 @@ function ProTipsTab() {
                 padding:"14px 14px 16px",
                 display:"flex",flexDirection:"column",gap:12}}>
                 {/* Body text */}
-                <div style={{fontSize:16,color:"var(--w80)",lineHeight:1.7,
+                <div style={{fontSize:19,color:"var(--w80)",lineHeight:1.7,
                   whiteSpace:"pre-wrap"}}>
                   {tip.body}
                 </div>
@@ -2099,10 +2115,10 @@ function ProTipsTab() {
                     background:`${cat.color}10`,
                     border:`1px solid ${cat.color}30`}}>
                     <BC c="Example / Rule of thumb"
-                      s={{fontSize:14,fontWeight:800,color:cat.color,
+                      s={{fontSize:17,fontWeight:800,color:cat.color,
                         letterSpacing:".1em",textTransform:"uppercase",
                         display:"block",marginBottom:5}}/>
-                    <div style={{fontSize:15,color:"var(--w80)",
+                    <div style={{fontSize:18,color:"var(--w80)",
                       lineHeight:1.6,fontFamily:"'JetBrains Mono',monospace"}}>
                       {tip.example}
                     </div>
@@ -3015,12 +3031,12 @@ function FittingsScreen({screen, navigate}) {
         maxHeight:"38vh",overflowY:"auto"}}>
 
         {/* Material */}
-        <BC c="Material" s={{fontSize:13,fontWeight:800,color:"var(--w50)",
+        <BC c="Material" s={{fontSize:16,fontWeight:800,color:"var(--w50)",
           letterSpacing:".1em",textTransform:"uppercase",display:"block",marginBottom:6}}/>
         <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
           {FITTING_MATERIALS.map(mat=>(
             <button key={mat} onClick={()=>setMaterial(mat)} style={{
-              padding:"7px 11px",borderRadius:4,fontSize:14,cursor:"pointer",
+              padding:"7px 11px",borderRadius:4,fontSize:17,cursor:"pointer",
               fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
               letterSpacing:".04em",
               background:material===mat?"var(--cop)":"var(--blk3)",
@@ -3042,12 +3058,12 @@ function FittingsScreen({screen, navigate}) {
           return (
             <div key={i} style={{marginBottom:10}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                <BC c={label} s={{fontSize:14,fontWeight:800,
+                <BC c={label} s={{fontSize:17,fontWeight:800,
                   color:isReduced?"var(--yel)":"var(--w50)",
                   letterSpacing:".1em",textTransform:"uppercase"}}/>
                 {isReduced && (
                   <button onClick={()=>setPort(i, sizes[0])} style={{
-                    fontSize:12,padding:"2px 8px",borderRadius:10,cursor:"pointer",
+                    fontSize:15,padding:"2px 8px",borderRadius:10,cursor:"pointer",
                     background:"rgba(245,197,24,.15)",color:"var(--yel)",
                     border:"1px solid rgba(245,197,24,.3)",minHeight:"unset",
                     fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,
@@ -3061,7 +3077,7 @@ function FittingsScreen({screen, navigate}) {
                     <button key={sz}
                       onClick={()=> isMain ? setMain(sz) : setPort(i, sz)}
                       style={{
-                        padding:"10px 14px",borderRadius:5,fontSize:18,cursor:"pointer",
+                        padding:"10px 14px",borderRadius:5,fontSize:20,cursor:"pointer",
                         fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,
                         background:on?accent:"var(--blk3)",
                         color:on?"#0c0c0c":"var(--w50)",
@@ -3081,9 +3097,9 @@ function FittingsScreen({screen, navigate}) {
             padding:"9px 12px",marginBottom:10,borderRadius:"var(--r)",
             background:reducing?"rgba(245,197,24,.08)":"var(--blk3)",
             border:`1px solid ${reducing?"rgba(245,197,24,.3)":"var(--bdr)"}`}}>
-            <BC c={reducing?"REDUCING":"STRAIGHT"} s={{fontSize:13,fontWeight:900,
+            <BC c={reducing?"REDUCING":"STRAIGHT"} s={{fontSize:16,fontWeight:900,
               letterSpacing:".1em",color:reducing?"var(--yel)":"var(--w25)"}}/>
-            <Mono c={sizeSpec} s={{fontSize:17,fontWeight:700,color:"var(--wht)"}}/>
+            <Mono c={sizeSpec} s={{fontSize:20,fontWeight:700,color:"var(--wht)"}}/>
           </div>
         )}
 
@@ -3094,7 +3110,7 @@ function FittingsScreen({screen, navigate}) {
         borderBottom:"1px solid var(--bdr)",flexShrink:0,
         display:"flex",gap:5,overflowX:"auto"}}>
         <button onClick={()=>setTypeFilter("all")} style={{
-          padding:"7px 12px",borderRadius:20,fontSize:14,cursor:"pointer",whiteSpace:"nowrap",
+          padding:"7px 12px",borderRadius:20,fontSize:17,cursor:"pointer",whiteSpace:"nowrap",
           fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,letterSpacing:".04em",minHeight:"unset",
           background:typeFilter==="all"?"var(--wht)":"var(--blk3)",
           color:typeFilter==="all"?"var(--blk)":"var(--w50)",
@@ -3102,7 +3118,7 @@ function FittingsScreen({screen, navigate}) {
         }}>ALL</button>
         {FITTING_TYPES.map(ft=>(
           <button key={ft.id} onClick={()=>setTypeFilter(ft.id)} style={{
-            padding:"7px 12px",borderRadius:20,fontSize:14,cursor:"pointer",whiteSpace:"nowrap",
+            padding:"7px 12px",borderRadius:20,fontSize:17,cursor:"pointer",whiteSpace:"nowrap",
             fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,letterSpacing:".06em",minHeight:"unset",
             background:typeFilter===ft.id?"var(--cop)":"var(--blk3)",
             color:typeFilter===ft.id?"var(--blk)":"var(--w50)",
@@ -3119,8 +3135,8 @@ function FittingsScreen({screen, navigate}) {
           <div style={{padding:"8px 12px",borderRadius:"var(--r)",
             background:"rgba(201,121,60,.08)",border:"1px solid rgba(201,121,60,.25)",
             marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
-            <BC c="★" s={{fontSize:17,color:"var(--cop)"}}/>
-            <div style={{fontSize:15,color:"var(--w80)"}}>
+            <BC c="★" s={{fontSize:20,color:"var(--cop)"}}/>
+            <div style={{fontSize:18,color:"var(--w80)"}}>
               <BC c={sponsoredRetailers.map(r=>r.name).join(" · ")}
                 s={{fontWeight:800,color:"var(--cop)"}}/>{" "}
               stocking these fittings locally.
@@ -3130,9 +3146,9 @@ function FittingsScreen({screen, navigate}) {
 
         {filtered.length === 0 ? (
           <div style={{padding:40,textAlign:"center"}}>
-            <BC c="No fittings found" s={{fontSize:19,fontWeight:800,
+            <BC c="No fittings found" s={{fontSize:21,fontWeight:800,
               color:"var(--w50)",display:"block",marginBottom:6}}/>
-            <div style={{fontSize:16,color:"var(--w25)"}}>
+            <div style={{fontSize:19,color:"var(--w25)"}}>
               Try a different size or material
             </div>
           </div>
@@ -3146,10 +3162,10 @@ function FittingsScreen({screen, navigate}) {
         {/* Retailer disclaimer */}
         <div style={{marginTop:20,padding:"10px 12px",borderRadius:"var(--r)",
           background:"var(--blk2)",border:"1px solid var(--bdr)"}}>
-          <BC c="About retailer links" s={{fontSize:14,fontWeight:800,
+          <BC c="About retailer links" s={{fontSize:17,fontWeight:800,
             color:"var(--w25)",letterSpacing:".08em",textTransform:"uppercase",
             display:"block",marginBottom:4}}/>
-          <div style={{fontSize:15,color:"var(--w25)",lineHeight:1.5}}>
+          <div style={{fontSize:18,color:"var(--w25)",lineHeight:1.5}}>
             Links open the retailer's search for that part number.
             Availability and pricing vary by location. Part numbers are from
             manufacturer catalogs and may differ by region.
@@ -3182,7 +3198,7 @@ function FittingCard({fitting, retailers, sponsored}) {
         gap:10,background:"none",textAlign:"left",cursor:"pointer"}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap"}}>
-            <span style={{fontSize:14,padding:"2px 7px",borderRadius:2,
+            <span style={{fontSize:17,padding:"2px 7px",borderRadius:2,
               background:`${brandColor}22`,
               color:brandColor,
               fontFamily:"'Barlow Condensed',sans-serif",
@@ -3190,7 +3206,7 @@ function FittingCard({fitting, retailers, sponsored}) {
               {fitting.brand}
             </span>
             {fitting.verified&&(
-              <span style={{fontSize:13,padding:"2px 7px",borderRadius:2,
+              <span style={{fontSize:16,padding:"2px 7px",borderRadius:2,
                 background:"rgba(34,197,94,.12)",color:"var(--grn)",
                 border:"1px solid rgba(34,197,94,.3)",
                 fontFamily:"'Barlow Condensed',sans-serif",
@@ -3198,21 +3214,21 @@ function FittingCard({fitting, retailers, sponsored}) {
                 {fitting.hdUrl ? "✓ HD VERIFIED" : "✓ VERIFIED"}</span>
             )}
             {isSponsored&&(
-              <span style={{fontSize:14,padding:"2px 6px",borderRadius:2,
+              <span style={{fontSize:17,padding:"2px 6px",borderRadius:2,
                 background:"rgba(201,121,60,.15)",color:"var(--cop)",
                 fontFamily:"'Barlow Condensed',sans-serif",
                 fontWeight:800,letterSpacing:".06em"}}>★ LOCAL STOCK</span>
             )}
           </div>
-          <BC c={fitting.desc} s={{fontSize:16,fontWeight:800,
+          <BC c={fitting.desc} s={{fontSize:19,fontWeight:800,
             color:"var(--wht)",display:"block",marginBottom:2}}/>
-          <Mono c={fitting.part} s={{fontSize:14,color:"var(--w50)"}}/>
+          <Mono c={fitting.part} s={{fontSize:17,color:"var(--w50)"}}/>
           {fitting.hd && (
             <Mono c={`  ·  HD #${fitting.hd}${fitting.sku ? "  ·  SKU " + fitting.sku : ""}`}
-              s={{fontSize:13,color:"var(--w25)"}}/>
+              s={{fontSize:16,color:"var(--w25)"}}/>
           )}
         </div>
-        <BC c={open?"▲":"▼"} s={{fontSize:15,color:"var(--w50)",flexShrink:0}}/>
+        <BC c={open?"▲":"▼"} s={{fontSize:18,color:"var(--w50)",flexShrink:0}}/>
       </button>
 
       {/* Retailer links — expanded */}
@@ -3227,15 +3243,15 @@ function FittingCard({fitting, retailers, sponsored}) {
                 border: `1px solid ${hazard ? "rgba(239,68,68,.35)" : "var(--bdr)"}`,
                 borderLeft: `3px solid ${hazard ? "#ef4444" : "var(--cop)"}`}}>
                 <BC c={hazard ? "⚠ Important" : "Field note"}
-                  s={{fontSize:13,fontWeight:900,letterSpacing:".1em",
+                  s={{fontSize:16,fontWeight:900,letterSpacing:".1em",
                     textTransform:"uppercase",display:"block",marginBottom:5,
                     color: hazard ? "#ef4444" : "var(--cop)"}}/>
-                <div style={{fontSize:15,lineHeight:1.55,
+                <div style={{fontSize:18,lineHeight:1.55,
                   color: hazard ? "rgba(255,190,190,.9)" : "var(--w80)"}}>{n}</div>
               </div>
             );
           })()}
-          <BC c="Find at retailer" s={{fontSize:14,fontWeight:800,
+          <BC c="Find at retailer" s={{fontSize:17,fontWeight:800,
             color:"var(--w50)",letterSpacing:".1em",textTransform:"uppercase",
             display:"block",marginBottom:10}}/>
           <div style={{display:"flex",flexDirection:"column",gap:7}}>
@@ -3254,23 +3270,23 @@ function FittingCard({fitting, retailers, sponsored}) {
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <div style={{width:8,height:8,borderRadius:"50%",
                     background:r.color,flexShrink:0}}/>
-                  <BC c={r.name} s={{fontSize:18,fontWeight:800,
+                  <BC c={r.name} s={{fontSize:20,fontWeight:800,
                     color:r.sponsored?"var(--cop)":"var(--w80)"}}/>
                   {r.sponsored&&(
-                    <BC c="★ SPONSOR" s={{fontSize:14,padding:"1px 6px",
+                    <BC c="★ SPONSOR" s={{fontSize:17,padding:"1px 6px",
                       borderRadius:2,background:"rgba(201,121,60,.2)",
                       color:"var(--cop)",fontWeight:900,letterSpacing:".08em"}}/>
                   )}
                 </div>
                 <BC c={r.id === "homedepot" && fitting.hdUrl ? "Open part →" : "Search →"}
-                  s={{fontSize:15,fontWeight:700,
+                  s={{fontSize:18,fontWeight:700,
                   color:r.id === "homedepot" && fitting.hdUrl ? "var(--cop)"
                        : r.sponsored ? "var(--cop)" : "var(--w50)"}}/>
               </a>
             ))}
           </div>
-          <div style={{marginTop:10,fontSize:14,color:"var(--w25)",lineHeight:1.5}}>
-            Search term: <Mono c={fitting.search} s={{fontSize:13,color:"var(--w25)"}}/>
+          <div style={{marginTop:10,fontSize:17,color:"var(--w25)",lineHeight:1.5}}>
+            Search term: <Mono c={fitting.search} s={{fontSize:16,color:"var(--w25)"}}/>
           </div>
         </div>
       )}
@@ -4407,7 +4423,7 @@ function CompatScreen({screen, navigate}) {
           border:"1px solid var(--bdr2)",borderLeft:"4px solid var(--grn)",
           padding:"11px 14px",marginBottom:16}}>
           <BC c="Pipe compatibility checker"
-            s={{fontSize:16,fontWeight:900,color:"var(--wht)",display:"block",marginBottom:3}}/>
+            s={{fontSize:19,fontWeight:900,color:"var(--wht)",display:"block",marginBottom:3}}/>
           <div className="body-muted">
             Select two pipe materials to see exactly how to connect them — fittings, steps, dielectric requirements, and code notes.
           </div>
@@ -4420,12 +4436,12 @@ function CompatScreen({screen, navigate}) {
           {/* Pipe A */}
           <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
             border:"1px solid var(--bdr2)",padding:"12px 12px 10px"}}>
-            <BC c="Pipe A" s={{fontSize:14,fontWeight:800,color:"var(--w50)",
+            <BC c="Pipe A" s={{fontSize:17,fontWeight:800,color:"var(--w50)",
               letterSpacing:".1em",display:"block",marginBottom:8}}/>
             <select value={matA} onChange={e=>setMatA(e.target.value)}
               style={{width:"100%",padding:"9px 8px",borderRadius:"var(--r)",
                 background:"var(--blk3)",border:"1px solid var(--bdr2)",
-                color:"var(--wht)",fontSize:15,outline:"none",marginBottom:8,
+                color:"var(--wht)",fontSize:18,outline:"none",marginBottom:8,
                 fontFamily:"'Barlow',sans-serif"}}>
               {COMPAT_MATERIALS.map(m=>(
                 <option key={m} value={m}>{m}</option>
@@ -4434,7 +4450,7 @@ function CompatScreen({screen, navigate}) {
             <select value={sizeA} onChange={e=>setSizeA(e.target.value)}
               style={{width:"100%",padding:"8px 8px",borderRadius:"var(--r)",
                 background:"var(--blk3)",border:"1px solid var(--bdr2)",
-                color:"var(--wht)",fontSize:16,outline:"none",
+                color:"var(--wht)",fontSize:19,outline:"none",
                 fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>
               {NOMINAL_SIZES.map(s=>(
                 <option key={s} value={s}>{s}</option>
@@ -4451,12 +4467,12 @@ function CompatScreen({screen, navigate}) {
           {/* Pipe B */}
           <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
             border:"1px solid var(--bdr2)",padding:"12px 12px 10px"}}>
-            <BC c="Pipe B" s={{fontSize:14,fontWeight:800,color:"var(--w50)",
+            <BC c="Pipe B" s={{fontSize:17,fontWeight:800,color:"var(--w50)",
               letterSpacing:".1em",display:"block",marginBottom:8}}/>
             <select value={matB} onChange={e=>setMatB(e.target.value)}
               style={{width:"100%",padding:"9px 8px",borderRadius:"var(--r)",
                 background:"var(--blk3)",border:"1px solid var(--bdr2)",
-                color:"var(--wht)",fontSize:15,outline:"none",marginBottom:8,
+                color:"var(--wht)",fontSize:18,outline:"none",marginBottom:8,
                 fontFamily:"'Barlow',sans-serif"}}>
               {COMPAT_MATERIALS.map(m=>(
                 <option key={m} value={m}>{m}</option>
@@ -4465,7 +4481,7 @@ function CompatScreen({screen, navigate}) {
             <select value={sizeB} onChange={e=>setSizeB(e.target.value)}
               style={{width:"100%",padding:"8px 8px",borderRadius:"var(--r)",
                 background:"var(--blk3)",border:"1px solid var(--bdr2)",
-                color:"var(--wht)",fontSize:16,outline:"none",
+                color:"var(--wht)",fontSize:19,outline:"none",
                 fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>
               {NOMINAL_SIZES.map(s=>(
                 <option key={s} value={s}>{s}</option>
@@ -4480,8 +4496,8 @@ function CompatScreen({screen, navigate}) {
             background:"rgba(245,158,11,.1)",border:"1px solid rgba(245,158,11,.3)",
             marginBottom:12}}>
             <BC c={`⚠ Size mismatch: ${sizeA} × ${sizeB}`}
-              s={{fontSize:15,fontWeight:800,color:"var(--yel)",display:"block",marginBottom:3}}/>
-            <div style={{fontSize:15,color:"var(--w50)",lineHeight:1.4}}>
+              s={{fontSize:18,fontWeight:800,color:"var(--yel)",display:"block",marginBottom:3}}/>
+            <div style={{fontSize:18,color:"var(--w50)",lineHeight:1.4}}>
               A reducing fitting or coupling is required in addition to the transition fitting below.
               Specify {sizeA}×{sizeB} when ordering.
             </div>
@@ -4494,8 +4510,8 @@ function CompatScreen({screen, navigate}) {
             background:"var(--blk2)",borderRadius:"var(--r)",
             border:"1px solid var(--bdr2)"}}>
             <BC c="Combination not in database"
-              s={{fontSize:18,fontWeight:800,display:"block",marginBottom:6,color:"var(--w50)"}}/>
-            <div style={{fontSize:15,color:"var(--w25)"}}>
+              s={{fontSize:20,fontWeight:800,display:"block",marginBottom:6,color:"var(--w50)"}}/>
+            <div style={{fontSize:18,color:"var(--w25)"}}>
               Use a Fernco flexible coupling as a universal fallback for drain connections,
               or consult a licensed plumber for unusual material combinations.
             </div>
@@ -4513,17 +4529,17 @@ function CompatScreen({screen, navigate}) {
               padding:"14px 16px"}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
                 <BC c={lvl.icon} s={{fontSize:24}}/>
-                <BC c={lvl.label} s={{fontSize:19,fontWeight:900,color:lvl.color}}/>
+                <BC c={lvl.label} s={{fontSize:21,fontWeight:900,color:lvl.color}}/>
                 {compat.dielectric&&(
                   <div style={{marginLeft:"auto",padding:"3px 10px",borderRadius:2,
                     background:"rgba(239,68,68,.15)",
                     border:"1px solid rgba(239,68,68,.35)"}}>
                     <BC c="⚡ DIELECTRIC REQUIRED"
-                      s={{fontSize:14,fontWeight:900,color:"#ef4444",letterSpacing:".08em"}}/>
+                      s={{fontSize:17,fontWeight:900,color:"#ef4444",letterSpacing:".08em"}}/>
                   </div>
                 )}
               </div>
-              <div style={{fontSize:16,color:"var(--w80)",lineHeight:1.6}}>
+              <div style={{fontSize:19,color:"var(--w80)",lineHeight:1.6}}>
                 {compat.summary}
               </div>
             </div>
@@ -4534,8 +4550,8 @@ function CompatScreen({screen, navigate}) {
                 background:"rgba(239,68,68,.08)",
                 border:"2px solid rgba(239,68,68,.35)"}}>
                 <BC c="⚡ Dielectric Union Required"
-                  s={{fontSize:16,fontWeight:900,color:"#ef4444",display:"block",marginBottom:6}}/>
-                <div style={{fontSize:15,color:"rgba(255,180,180,.85)",lineHeight:1.6}}>
+                  s={{fontSize:19,fontWeight:900,color:"#ef4444",display:"block",marginBottom:6}}/>
+                <div style={{fontSize:18,color:"rgba(255,180,180,.85)",lineHeight:1.6}}>
                   {matA} and {matB} are dissimilar metals. Direct contact creates a galvanic cell
                   that corrodes both metals over time. A dielectric union contains a plastic
                   insulating sleeve that breaks electrical contact between the two metals.
@@ -4549,9 +4565,9 @@ function CompatScreen({screen, navigate}) {
               <div style={{padding:"10px 14px",borderRadius:"var(--r)",
                 background:"rgba(239,68,68,.08)",
                 border:"1px solid rgba(239,68,68,.3)"}}>
-                <BC c="⚠ Warning" s={{fontSize:15,fontWeight:900,color:"#ef4444",
+                <BC c="⚠ Warning" s={{fontSize:18,fontWeight:900,color:"#ef4444",
                   display:"block",marginBottom:4}}/>
-                <div style={{fontSize:15,color:"rgba(255,180,180,.85)",lineHeight:1.5}}>
+                <div style={{fontSize:18,color:"rgba(255,180,180,.85)",lineHeight:1.5}}>
                   {compat.warning}
                 </div>
               </div>
@@ -4562,7 +4578,7 @@ function CompatScreen({screen, navigate}) {
               <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
                 border:"1px solid var(--bdr2)",overflow:"hidden"}}>
                 <div style={{padding:"10px 14px 6px"}}>
-                  <BC c="Fitting Options" s={{fontSize:14,fontWeight:800,
+                  <BC c="Fitting Options" s={{fontSize:17,fontWeight:800,
                     color:"var(--w50)",letterSpacing:".12em",textTransform:"uppercase"}}/>
                 </div>
                 {compat.fittings.map((f,i)=>{
@@ -4576,15 +4592,15 @@ function CompatScreen({screen, navigate}) {
                         <div style={{flex:1}}>
                           <div style={{display:"flex",alignItems:"center",
                             gap:6,marginBottom:4,flexWrap:"wrap"}}>
-                            <span style={{fontSize:14,padding:"2px 7px",borderRadius:2,
+                            <span style={{fontSize:17,padding:"2px 7px",borderRadius:2,
                               background:`${bc}22`,color:bc,
                               fontFamily:"'Barlow Condensed',sans-serif",
                               fontWeight:800,letterSpacing:".06em"}}>
                               {f.brand}
                             </span>
-                            <Mono c={f.part} s={{fontSize:15,color:"var(--w50)"}}/>
+                            <Mono c={f.part} s={{fontSize:18,color:"var(--w50)"}}/>
                           </div>
-                          <BC c={f.desc} s={{fontSize:16,fontWeight:700,color:"var(--wht)"}}/>
+                          <BC c={f.desc} s={{fontSize:19,fontWeight:700,color:"var(--wht)"}}/>
                         </div>
                       </div>
                       {/* Retailer links */}
@@ -4600,7 +4616,7 @@ function CompatScreen({screen, navigate}) {
                               display:"flex",alignItems:"center",gap:5}}>
                             <div style={{width:6,height:6,borderRadius:"50%",
                               background:r.color,flexShrink:0}}/>
-                            <BC c={r.short} s={{fontSize:14,fontWeight:800,
+                            <BC c={r.short} s={{fontSize:17,fontWeight:800,
                               color:r.sponsored?"var(--cop)":"var(--w50)",
                               letterSpacing:".04em"}}/>
                           </a>
@@ -4616,7 +4632,7 @@ function CompatScreen({screen, navigate}) {
             {compat.steps?.length > 0 && (
               <div style={{background:"var(--blk2)",borderRadius:"var(--r)",
                 border:"1px solid var(--bdr2)",padding:"12px 14px"}}>
-                <BC c="Step-by-step" s={{fontSize:14,fontWeight:800,
+                <BC c="Step-by-step" s={{fontSize:17,fontWeight:800,
                   color:"var(--w50)",letterSpacing:".12em",textTransform:"uppercase",
                   display:"block",marginBottom:10}}/>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -4625,9 +4641,9 @@ function CompatScreen({screen, navigate}) {
                       background:"var(--blk3)",borderRadius:"var(--r)",
                       padding:"9px 11px",alignItems:"flex-start"}}>
                       <BC c={String(i+1).padStart(2,"0")}
-                        s={{fontSize:15,fontWeight:900,color:lvl.color,
+                        s={{fontSize:18,fontWeight:900,color:lvl.color,
                           flexShrink:0,paddingTop:1}}/>
-                      <div style={{fontSize:16,color:"var(--w80)",lineHeight:1.6}}>
+                      <div style={{fontSize:19,color:"var(--w80)",lineHeight:1.6}}>
                         {step}
                       </div>
                     </div>
@@ -4641,10 +4657,10 @@ function CompatScreen({screen, navigate}) {
               <div style={{padding:"10px 14px",borderRadius:"var(--r)",
                 background:"rgba(74,158,255,.08)",
                 border:"1px solid rgba(74,158,255,.2)"}}>
-                <BC c="Code Reference" s={{fontSize:14,fontWeight:800,
+                <BC c="Code Reference" s={{fontSize:17,fontWeight:800,
                   color:"#4a9eff",letterSpacing:".1em",textTransform:"uppercase",
                   display:"block",marginBottom:5}}/>
-                <div style={{fontSize:16,color:"var(--w80)",lineHeight:1.6}}>
+                <div style={{fontSize:19,color:"var(--w80)",lineHeight:1.6}}>
                   {compat.code}
                 </div>
               </div>
@@ -4654,10 +4670,10 @@ function CompatScreen({screen, navigate}) {
             {compat.notes&&(
               <div style={{padding:"10px 14px",borderRadius:"var(--r)",
                 background:"var(--blk2)",border:"1px solid var(--bdr2)"}}>
-                <BC c="Field Notes" s={{fontSize:14,fontWeight:800,
+                <BC c="Field Notes" s={{fontSize:17,fontWeight:800,
                   color:"var(--w50)",letterSpacing:".1em",textTransform:"uppercase",
                   display:"block",marginBottom:5}}/>
-                <div style={{fontSize:15,color:"var(--w80)",lineHeight:1.6}}>
+                <div style={{fontSize:18,color:"var(--w80)",lineHeight:1.6}}>
                   {compat.notes}
                 </div>
               </div>
@@ -4705,14 +4721,14 @@ function HomeTile({tile, navigate}) {
         transition:"color .1s",display:"flex"}}>{tile.icon}</div>
       <div style={{flex:1,minWidth:0}}>
         <BC c={tile.label} s={{
-          fontSize:21,
+          fontSize:23,
           fontWeight:900,
           color:"var(--wht)",
           display:"block",
           marginBottom:3,
           letterSpacing:".05em",
         }}/>
-        <div style={{fontSize:14,color:"var(--w50)",lineHeight:1.35}}>{tile.sub}</div>
+        <div style={{fontSize:17,color:"var(--w50)",lineHeight:1.35}}>{tile.sub}</div>
       </div>
       <BC c="›" s={{fontSize:26,color:"var(--w25)",flexShrink:0,lineHeight:1}}/>
     </button>
@@ -4790,7 +4806,7 @@ function HomeScreen({navigate, screen, trial, onBuy}) {
             <div style={{minWidth:0}}>
               <BC c="POCKET PLUMBER™" s={{fontSize:29,fontWeight:900,
                 letterSpacing:".02em",color:"var(--wht)",display:"block",lineHeight:1}}/>
-              <Mono c="CONTRACTOR-GRADE FIELD REFERENCE" s={{fontSize:11,
+              <Mono c="CONTRACTOR-GRADE FIELD REFERENCE" s={{fontSize:14,
                 color:"var(--w50)",letterSpacing:".13em",display:"block",marginTop:7}}/>
             </div>
           </div>
@@ -4814,9 +4830,9 @@ function HomeScreen({navigate, screen, trial, onBuy}) {
           padding:"6px 10px",borderRadius:"var(--r)",
           background:"var(--blk2)",border:"1px solid var(--bdr)"}}>
           <BC c="CONTRACTOR GRADE · FIELD REFERENCE"
-            s={{fontSize:12,fontWeight:800,color:"var(--w25)",letterSpacing:".1em"}}/>
+            s={{fontSize:15,fontWeight:800,color:"var(--w25)",letterSpacing:".1em"}}/>
           <Mono c="REV 2.0"
-            s={{fontSize:12,color:"var(--w25)",fontWeight:600}}/>
+            s={{fontSize:15,color:"var(--w25)",fontWeight:600}}/>
         </div>
 
       </div>
